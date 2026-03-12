@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 780">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; }
+    </style>
+    <filter id="shadow" x="-5%" y="-2%" width="112%" height="106%">
+      <feDropShadow dx="0" dy="2" stdDeviation="8" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- macOS-style context menu background -->
+  <rect width="460" height="780" rx="10" fill="#f5f5f5" filter="url(#shadow)"/>
+  <rect width="460" height="780" rx="10" fill="#f5f5f5" stroke="#d0d0d0" stroke-width="0.5"/>
+
+  <!-- Menu items -->
+  <!-- Open to the Side -->
+  <text x="24" y="32" fill="#333" font-size="13">Open to the Side</text>
+  <text x="400" y="32" text-anchor="end" fill="#999" font-size="12">⌥ ⌘ ↵</text>
+
+  <!-- Open With... -->
+  <text x="24" y="62" fill="#333" font-size="13">Open With...</text>
+
+  <!-- Reveal in Finder -->
+  <text x="24" y="92" fill="#333" font-size="13">Reveal in Finder</text>
+  <text x="420" y="92" text-anchor="end" fill="#999" font-size="12">⌥ ⌘ R</text>
+
+  <!-- Open in Integrated Terminal -->
+  <text x="24" y="122" fill="#333" font-size="13">Open in Integrated Terminal</text>
+
+  <!-- Separator -->
+  <line x1="12" y1="140" x2="448" y2="140" stroke="#e0e0e0" stroke-width="1"/>
+
+  <!-- Maven -->
+  <text x="24" y="164" fill="#333" font-size="13">Maven</text>
+  <text x="436" y="164" text-anchor="end" fill="#999" font-size="14">›</text>
+
+  <!-- Separator -->
+  <line x1="12" y1="182" x2="448" y2="182" stroke="#e0e0e0" stroke-width="1"/>
+
+  <!-- Select for Compare -->
+  <text x="24" y="206" fill="#333" font-size="13">Select for Compare</text>
+
+  <!-- Separator -->
+  <line x1="12" y1="224" x2="448" y2="224" stroke="#e0e0e0" stroke-width="1"/>
+
+  <!-- Open Timeline -->
+  <text x="24" y="248" fill="#333" font-size="13">Open Timeline</text>
+
+  <!-- Separator -->
+  <line x1="12" y1="266" x2="448" y2="266" stroke="#e0e0e0" stroke-width="1"/>
+
+  <!-- Add File to Chat -->
+  <text x="24" y="290" fill="#333" font-size="13">Add File to Chat</text>
+
+  <!-- Separator -->
+  <line x1="12" y1="308" x2="448" y2="308" stroke="#e0e0e0" stroke-width="1"/>
+
+  <!-- Cut -->
+  <text x="24" y="332" fill="#333" font-size="13">Cut</text>
+  <text x="420" y="332" text-anchor="end" fill="#999" font-size="12">⌘ X</text>
+
+  <!-- Copy -->
+  <text x="24" y="362" fill="#333" font-size="13">Copy</text>
+  <text x="420" y="362" text-anchor="end" fill="#999" font-size="12">⌘ C</text>
+
+  <!-- Separator -->
+  <line x1="12" y1="380" x2="448" y2="380" stroke="#e0e0e0" stroke-width="1"/>
+
+  <!-- Copy Path -->
+  <text x="24" y="404" fill="#333" font-size="13">Copy Path</text>
+  <text x="410" y="404" text-anchor="end" fill="#999" font-size="12">⌥ ⌘ C</text>
+
+  <!-- Copy Relative Path -->
+  <text x="24" y="434" fill="#333" font-size="13">Copy Relative Path</text>
+  <text x="410" y="434" text-anchor="end" fill="#999" font-size="12">⇧ ⌥ ⌘ C</text>
+
+  <!-- Separator -->
+  <line x1="12" y1="452" x2="448" y2="452" stroke="#e0e0e0" stroke-width="1"/>
+
+  <!-- Run Tests -->
+  <text x="24" y="476" fill="#333" font-size="13">Run Tests</text>
+  <!-- Debug Tests -->
+  <text x="24" y="506" fill="#333" font-size="13">Debug Tests</text>
+  <!-- Run Tests with Coverage -->
+  <text x="24" y="536" fill="#333" font-size="13">Run Tests with Coverage</text>
+
+  <!-- Separator -->
+  <line x1="12" y1="554" x2="448" y2="554" stroke="#e0e0e0" stroke-width="1"/>
+
+  <!-- lwebp commands (highlighted) -->
+  <rect x="4" y="560" width="452" height="30" rx="5" fill="#0060c0" opacity="0.12"/>
+  <text x="24" y="580" fill="#333" font-size="13" font-weight="600">Convert to WebP</text>
+
+  <text x="24" y="612" fill="#333" font-size="13">Convert to WebP (Select Quality...)</text>
+
+  <!-- Rename -->
+  <text x="24" y="642" fill="#333" font-size="13">Rename...</text>
+  <text x="436" y="642" text-anchor="end" fill="#999" font-size="12">↵</text>
+
+  <!-- Delete -->
+  <text x="24" y="672" fill="#333" font-size="13">Delete</text>
+  <text x="420" y="672" text-anchor="end" fill="#999" font-size="12">⌘ ⌫</text>
+
+  <!-- Separator -->
+  <line x1="12" y1="690" x2="448" y2="690" stroke="#e0e0e0" stroke-width="1"/>
+
+  <!-- Git: View File History -->
+  <text x="24" y="714" fill="#333" font-size="13">Git: View File History</text>
+  <text x="420" y="714" text-anchor="end" fill="#999" font-size="12">⌥ H</text>
+</svg>

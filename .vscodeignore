@@ -12,3 +12,4 @@ CLAUDE.md
 out/**/*.test.js
 out/**/*.test.d.ts
 out/__mocks__/**
+media/screenshots/*.svg

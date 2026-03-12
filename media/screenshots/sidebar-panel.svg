@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 820">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; }
+    </style>
+  </defs>
+
+  <!-- macOS window frame -->
+  <rect width="700" height="820" rx="10" fill="#f3f3f3"/>
+  <!-- Title bar -->
+  <rect width="700" height="38" rx="10" fill="#e8e8e8"/>
+  <rect x="0" y="28" width="700" height="10" fill="#e8e8e8"/>
+  <!-- Traffic lights -->
+  <circle cx="20" cy="19" r="6.5" fill="#ff5f57"/>
+  <circle cx="40" cy="19" r="6.5" fill="#febc2e"/>
+  <circle cx="60" cy="19" r="6.5" fill="#28c840"/>
+
+  <!-- Activity bar (dark) -->
+  <rect x="0" y="38" width="48" height="782" fill="#333333" rx="0"/>
+  <!-- Activity bar icons -->
+  <rect x="12" y="52" width="24" height="24" rx="3" fill="none" stroke="#999" stroke-width="1.5"/>
+  <line x1="16" y1="58" x2="32" y2="58" stroke="#999" stroke-width="1.5"/>
+  <line x1="16" y1="64" x2="28" y2="64" stroke="#999" stroke-width="1.5"/>
+  <line x1="16" y1="70" x2="32" y2="70" stroke="#999" stroke-width="1.5"/>
+
+  <!-- Git icon -->
+  <circle cx="24" cy="108" r="10" fill="none" stroke="#999" stroke-width="1.5"/>
+
+  <!-- Search icon -->
+  <circle cx="22" cy="158" r="8" fill="none" stroke="#999" stroke-width="1.5"/>
+  <line x1="28" y1="164" x2="33" y2="169" stroke="#999" stroke-width="1.5"/>
+
+  <!-- lwebp icon (active) -->
+  <rect x="0" y="186" width="2" height="36" fill="#444"/>
+  <text x="24" y="210" text-anchor="middle" fill="white" font-size="16" font-weight="bold">L</text>
+  <text x="30" y="218" fill="#34d399" font-size="8">/</text>
+
+  <!-- Sidebar content area -->
+  <rect x="48" y="38" width="652" height="782" fill="#ffffff"/>
+
+  <!-- Sidebar header -->
+  <text x="68" y="62" fill="#666" font-size="11" font-weight="600" letter-spacing="1">LWEBP – WEBP CONVERTER: CONVERT TO WE...</text>
+
+  <!-- SELECT IMAGES section -->
+  <text x="68" y="100" fill="#333" font-size="14" font-weight="700">SELECT IMAGES</text>
+
+  <!-- Buttons row -->
+  <rect x="68" y="116" width="280" height="38" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1"/>
+  <text x="208" y="140" text-anchor="middle" fill="#333" font-size="13">Select Files</text>
+  <rect x="368" y="116" width="280" height="38" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1"/>
+  <text x="508" y="140" text-anchor="middle" fill="#333" font-size="13">Select Folder</text>
+
+  <!-- No files selected -->
+  <rect x="68" y="170" width="580" height="44" rx="4" fill="#fafafa" stroke="#e0e0e0" stroke-width="1"/>
+  <text x="358" y="197" text-anchor="middle" fill="#999" font-size="13" font-style="italic">No files selected</text>
+
+  <!-- SETTINGS section -->
+  <text x="68" y="252" fill="#333" font-size="14" font-weight="700">SETTINGS</text>
+
+  <!-- Output Format label -->
+  <text x="68" y="284" fill="#333" font-size="13" font-weight="600">Output Format</text>
+  <!-- Dropdown -->
+  <rect x="68" y="294" width="580" height="40" rx="4" fill="#ffffff" stroke="#ccc" stroke-width="1"/>
+  <text x="84" y="320" fill="#333" font-size="14">WebP</text>
+  <text x="628" y="320" text-anchor="end" fill="#999" font-size="14">▾</text>
+
+  <!-- Quality label -->
+  <text x="68" y="368" fill="#333" font-size="13" font-weight="600">Quality</text>
+  <!-- Slider track -->
+  <rect x="68" y="386" width="520" height="6" rx="3" fill="#e0e0e0"/>
+  <!-- Slider filled -->
+  <rect x="68" y="386" width="416" height="6" rx="3" fill="#2563eb"/>
+  <!-- Slider thumb -->
+  <circle cx="484" cy="389" r="10" fill="#2563eb"/>
+  <!-- Quality value -->
+  <text x="620" y="396" fill="#333" font-size="16" font-weight="600">80</text>
+
+  <!-- Delete original checkbox -->
+  <rect x="68" y="430" width="18" height="18" rx="3" fill="#ffffff" stroke="#ccc" stroke-width="1.5"/>
+  <text x="96" y="445" fill="#333" font-size="13">Delete original after conversion</text>
+
+  <!-- Convert button -->
+  <rect x="68" y="490" width="580" height="48" rx="6" fill="#4ade80"/>
+  <text x="358" y="520" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="600">Convert to WebP</text>
+</svg>
