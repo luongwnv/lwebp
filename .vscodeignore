@@ -1,0 +1,14 @@
+.vscode/**
+.vscode-test/**
+src/**
+.gitignore
+**/tsconfig.json
+**/*.map
+*.vsix
+.git/**
+jest.config.js
+coverage/**
+CLAUDE.md
+out/**/*.test.js
+out/**/*.test.d.ts
+out/__mocks__/**
