@@ -156,10 +156,9 @@ export class ConversionService {
     const buffer = await sharp(filePath)
       .rotate() // auto-rotate based on EXIF orientation
       .resize({ width: maxWidth, withoutEnlargement: true })
+      .png()
       .toBuffer();
-    const ext = path.extname(filePath).toLowerCase();
-    const mime = ext === '.png' ? 'image/png' : ext === '.gif' ? 'image/gif' : 'image/jpeg';
-    return `data:${mime};base64,${buffer.toString('base64')}`;
+    return `data:image/png;base64,${buffer.toString('base64')}`;
   }
 
   async convertFile(inputPath: string, quality: number, outputDir?: string, crop?: CropOptions, format: OutputFormat = 'webp'): Promise<ConversionResult> {
@@ -246,6 +245,14 @@ export class ConversionService {
     }
 
     return { results, errors };
+  }
+
+  async rotateImage(filePath: string, angle: number): Promise<void> {
+    const sharp = (await import('sharp')).default;
+    const buffer = await sharp(filePath)
+      .rotate(angle)
+      .toBuffer();
+    await fs.writeFile(filePath, buffer);
   }
 
   async findImagesInFolder(folderPath: string): Promise<string[]> {

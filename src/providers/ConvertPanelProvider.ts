@@ -3,7 +3,7 @@ import * as path from 'path';
 import { ConversionService, CropOptions, OutputFormat } from '../services/ConversionService';
 
 interface WebviewMessage {
-  type: 'selectFiles' | 'selectFolder' | 'convert' | 'getConfig' | 'previewFile' | 'getFileInfo' | 'getExif' | 'estimateSize';
+  type: 'selectFiles' | 'selectFolder' | 'convert' | 'getConfig' | 'previewFile' | 'getFileInfo' | 'getExif' | 'estimateSize' | 'rotateImage';
   quality?: number;
   deleteOriginal?: boolean;
   files?: string[];
@@ -11,6 +11,7 @@ interface WebviewMessage {
   filePath?: string;
   crop?: CropOptions;
   format?: OutputFormat;
+  angle?: number;
 }
 
 export class ConvertPanelProvider implements vscode.WebviewViewProvider {
@@ -69,18 +70,21 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
 
         case 'selectFolder': {
           const uris = await vscode.window.showOpenDialog({
-            canSelectMany: false,
+            canSelectMany: true,
             canSelectFolders: true,
             canSelectFiles: false,
           });
           if (uris && uris.length > 0) {
-            const folderPath = uris[0].fsPath;
-            const images = await this._service.findImagesInFolder(folderPath);
-            const filesWithInfo = await this._getFilesInfo(images);
+            const allImages: string[] = [];
+            for (const uri of uris) {
+              const images = await this._service.findImagesInFolder(uri.fsPath);
+              allImages.push(...images);
+            }
+            const filesWithInfo = await this._getFilesInfo(allImages);
             this._postMessage({
               type: 'filesSelected',
               files: filesWithInfo,
-              folder: folderPath,
+              folder: uris.map(u => u.fsPath).join(', '),
             });
           }
           break;
@@ -97,10 +101,12 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
               base64,
               info,
             });
-          } catch {
+          } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
             this._postMessage({
               type: 'previewError',
               filePath: message.filePath,
+              error: errorMsg,
             });
           }
           break;
@@ -149,6 +155,25 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
             });
           } catch {
             // Ignore estimation errors
+          }
+          break;
+        }
+
+        case 'rotateImage': {
+          if (!message.filePath || !message.angle) { return; }
+          try {
+            await this._service.rotateImage(message.filePath, message.angle);
+            const base64 = await this._service.getImageBase64(message.filePath);
+            const info = await this._service.getImageInfo(message.filePath);
+            // Update file info in the list
+            this._postMessage({
+              type: 'imageRotated',
+              filePath: message.filePath,
+              base64,
+              info,
+            });
+          } catch {
+            this._postMessage({ type: 'error', message: 'Failed to rotate image.' });
           }
           break;
         }
@@ -449,6 +474,8 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       </div>
     </div>
     <div class="crop-controls">
+      <button class="btn-secondary btn-small" id="btnRotateLeft" title="Rotate 90° Left">&#x21BA; Left</button>
+      <button class="btn-secondary btn-small" id="btnRotateRight" title="Rotate 90° Right">&#x21BB; Right</button>
       <button class="btn-secondary btn-small" id="btnCropToggle">Enable Crop</button>
       <button class="btn-secondary btn-small btn-danger" id="btnCropClear" style="display:none;">Clear Crop</button>
     </div>
@@ -546,6 +573,8 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     const cropBox = document.getElementById('cropBox');
     const btnCropToggle = document.getElementById('btnCropToggle');
     const btnCropClear = document.getElementById('btnCropClear');
+    const btnRotateLeft = document.getElementById('btnRotateLeft');
+    const btnRotateRight = document.getElementById('btnRotateRight');
     const cropInputs = document.getElementById('cropInputs');
     const cropX = document.getElementById('cropX');
     const cropY = document.getElementById('cropY');
@@ -607,6 +636,34 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     });
 
     btnCropClear.addEventListener('click', clearCrop);
+
+    // Rotate buttons with accumulated angle + debounce
+    let pendingRotation = 0;
+    let rotateTimer = null;
+    let isRotating = false;
+
+    btnRotateLeft.addEventListener('click', () => queueRotation(-90));
+    btnRotateRight.addEventListener('click', () => queueRotation(90));
+
+    function queueRotation(angle) {
+      if (state.selectedIndex < 0 || state.converting) return;
+      pendingRotation = (pendingRotation + angle) % 360;
+      if (pendingRotation < 0) pendingRotation += 360;
+      // Instant visual feedback
+      previewImage.style.transform = 'rotate(' + pendingRotation + 'deg)';
+      if (rotateTimer) clearTimeout(rotateTimer);
+      rotateTimer = setTimeout(flushRotation, 400);
+    }
+
+    function flushRotation() {
+      if (pendingRotation === 0 || isRotating) return;
+      const file = state.files[state.selectedIndex];
+      if (!file) return;
+      isRotating = true;
+      var angle = pendingRotation;
+      pendingRotation = 0;
+      vscode.postMessage({ type: 'rotateImage', filePath: file.path, angle: angle });
+    }
 
     function clearCrop() {
       state.cropData = null;
@@ -732,9 +789,29 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
             '<span>' + msg.info.format.toUpperCase() + ' &bull; ' + formatSize(msg.info.size) + '</span>';
           break;
 
+        case 'imageRotated':
+          isRotating = false;
+          previewImage.style.transform = '';
+          previewImage.src = msg.base64;
+          state.previewInfo = msg.info;
+          previewInfo.innerHTML =
+            '<span>' + msg.info.width + ' x ' + msg.info.height + '</span>' +
+            '<span>' + msg.info.format.toUpperCase() + ' &bull; ' + formatSize(msg.info.size) + '</span>';
+          if (state.selectedIndex >= 0 && state.files[state.selectedIndex]) {
+            state.files[state.selectedIndex].width = msg.info.width;
+            state.files[state.selectedIndex].height = msg.info.height;
+            state.files[state.selectedIndex].size = msg.info.size;
+            renderFileList();
+          }
+          clearCrop();
+          requestEstimate();
+          // Flush any pending rotation queued while rotating
+          if (pendingRotation !== 0) flushRotation();
+          break;
+
         case 'previewError':
           previewLoading.style.display = 'block';
-          previewLoading.textContent = 'Failed to load preview';
+          previewLoading.textContent = 'Failed to load preview' + (msg.error ? ': ' + msg.error : '');
           previewImage.style.display = 'none';
           break;
 

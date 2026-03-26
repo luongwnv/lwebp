@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(node -e \"const sharp = require\\(''sharp''\\); sharp\\(Buffer.from\\([0]\\)\\).metadata\\(\\).catch\\(\\(\\) => console.log\\(''sharp loaded OK''\\)\\)\")",
+      "Bash(node -e \"const sharp = require\\(''sharp''\\); console.log\\(''sharp loaded OK''\\)\")"
     ]
   }
 }

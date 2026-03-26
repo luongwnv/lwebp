@@ -287,14 +287,12 @@ describe('ConversionService', () => {
       expect(mockResize).toHaveBeenCalledWith({ width: 200, withoutEnlargement: true });
     });
 
-    it('should use correct MIME type for jpg', async () => {
-      const result = await service.getImageBase64('/photos/image.jpg');
-      expect(result).toMatch(/^data:image\/jpeg;base64,/);
-    });
+    it('should always use png MIME type for preview', async () => {
+      const result1 = await service.getImageBase64('/photos/image.jpg');
+      expect(result1).toMatch(/^data:image\/png;base64,/);
 
-    it('should use correct MIME type for gif', async () => {
-      const result = await service.getImageBase64('/photos/image.gif');
-      expect(result).toMatch(/^data:image\/gif;base64,/);
+      const result2 = await service.getImageBase64('/photos/image.gif');
+      expect(result2).toMatch(/^data:image\/png;base64,/);
     });
   });
 

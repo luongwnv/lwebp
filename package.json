@@ -2,7 +2,7 @@
   "name": "lwebp",
   "displayName": "lwebp - Image Converter",
   "description": "Convert images (PNG, JPG, GIF, BMP, TIFF, AVIF, HEIC) to WebP, JPEG, or PNG with preview, crop, EXIF viewer, and quality control.",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "publisher": "luongwnv",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -201,8 +201,9 @@
     "package:linux-x64": "npm run clean:sharp && npm install --cpu x64 --os linux sharp && npx @vscode/vsce package --target linux-x64",
     "package:linux-arm64": "npm run clean:sharp && npm install --cpu arm64 --os linux sharp && npx @vscode/vsce package --target linux-arm64",
     "package:win32-x64": "npm run clean:sharp && npm install --cpu x64 --os win32 sharp && npx @vscode/vsce package --target win32-x64",
-    "clean:sharp": "rm -rf node_modules/@img/sharp-* node_modules/@img/sharp-libvips-*",
-    "publish:all": "npm run package && npx @vscode/vsce publish --packagePath *.vsix"
+    "clean:sharp": "rm -rf node_modules/sharp node_modules/@img/sharp-* node_modules/@img/sharp-libvips-*",
+    "publish:all": "npm run package && npm run restore:sharp && npx @vscode/vsce publish --packagePath *.vsix",
+    "restore:sharp": "npm run clean:sharp && npm install"
   },
   "dependencies": {
     "exif-reader": "^2.0.1",
