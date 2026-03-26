@@ -9,6 +9,7 @@ const mockJpeg = jest.fn().mockReturnValue({ toFile: mockToFile, toBuffer: mockT
 const mockPng = jest.fn().mockReturnValue({ toFile: mockToFile, toBuffer: mockToBuffer });
 const mockExtract = jest.fn();
 const mockResize = jest.fn();
+const mockRotate = jest.fn();
 const mockMetadata = jest.fn().mockResolvedValue({ width: 800, height: 600, format: 'png', exif: Buffer.from('fake-exif') });
 
 const createMockPipeline = () => {
@@ -18,12 +19,14 @@ const createMockPipeline = () => {
     png: mockPng,
     extract: mockExtract,
     resize: mockResize,
+    rotate: mockRotate,
     metadata: mockMetadata,
     toBuffer: mockToBuffer,
   };
   // Each chainable method returns the pipeline
   mockExtract.mockReturnValue(pipeline);
   mockResize.mockReturnValue(pipeline);
+  mockRotate.mockReturnValue(pipeline);
   return pipeline;
 };
 

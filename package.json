@@ -2,7 +2,7 @@
   "name": "lwebp",
   "displayName": "lwebp - Image Converter",
   "description": "Convert images (PNG, JPG, GIF, BMP, TIFF, AVIF, HEIC) to WebP, JPEG, or PNG with preview, crop, EXIF viewer, and quality control.",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "publisher": "luongwnv",
   "license": "MIT",
   "icon": "media/icon.png",

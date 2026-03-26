@@ -140,7 +140,7 @@ export class ConversionService {
 
   async estimateOutputSize(filePath: string, quality: number, format: OutputFormat = 'webp'): Promise<number> {
     const sharp = (await import('sharp')).default;
-    let pipeline = sharp(filePath);
+    let pipeline = sharp(filePath).rotate();
     pipeline = this._applyOutputFormat(pipeline, format, quality);
     const buffer = await pipeline.toBuffer();
     return buffer.length;
@@ -154,6 +154,7 @@ export class ConversionService {
   async getImageBase64(filePath: string, maxWidth = 400): Promise<string> {
     const sharp = (await import('sharp')).default;
     const buffer = await sharp(filePath)
+      .rotate() // auto-rotate based on EXIF orientation
       .resize({ width: maxWidth, withoutEnlargement: true })
       .toBuffer();
     const ext = path.extname(filePath).toLowerCase();
@@ -173,7 +174,8 @@ export class ConversionService {
     const inputSize = inputStat.size;
 
     const ext = path.extname(inputPath).toLowerCase();
-    let pipeline = sharp(inputPath, ext === '.gif' ? { animated: true } : undefined);
+    let pipeline = sharp(inputPath, ext === '.gif' ? { animated: true } : undefined)
+      .rotate(); // auto-rotate based on EXIF orientation
 
     if (crop) {
       pipeline = pipeline.extract({
