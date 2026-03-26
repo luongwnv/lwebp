@@ -8,7 +8,7 @@ Convert images to **WebP**, **JPEG**, or **PNG** directly from VS Code with a fu
 
 A dedicated sidebar in the Activity Bar with image preview, quality slider, format selector, crop tool, EXIF viewer, and batch conversion.
 
-![Sidebar Panel](media/screenshots/sidebar-panel.png)
+![Sidebar Panel](https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/sidebar-panel.png)
 
 - **File & folder selection** — pick individual files or scan entire folders
 - **Image preview** with dimensions and file size
@@ -22,7 +22,7 @@ A dedicated sidebar in the Activity Bar with image preview, quality slider, form
 
 Right-click any image in the Explorer or editor tab to convert instantly.
 
-![Context Menu](media/screenshots/context-menu.png)
+![Context Menu](https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/context-menu.png)
 
 - **Convert to WebP** — instant conversion with configured quality
 - **Convert to WebP (Select Quality...)** — choose quality before converting
@@ -32,7 +32,7 @@ Right-click any image in the Explorer or editor tab to convert instantly.
 
 Open any supported image with **"Reopen Editor With..."** to get a full conversion UI with EXIF data.
 
-![Image Editor](media/screenshots/image-editor.png)
+![Image Editor](https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/image-editor.png)
 
 - Full image preview with metadata
 - EXIF data display (camera, lens, exposure, ISO, GPS)
