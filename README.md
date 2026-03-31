@@ -1,85 +1,80 @@
 # lwebp - Image Converter for VS Code
 
-Convert images to **WebP**, **JPEG**, or **PNG** directly from VS Code with a full-featured sidebar panel and custom image editor.
+Convert images to **WebP**, **JPEG**, or **PNG** directly from VS Code with pixel-art styled UI, sidebar panel, and custom image editor.
+
+<img src="https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/sidebar-panel.png" width="350" />
 
 ## Features
 
 ### Sidebar Panel
 
-A dedicated sidebar in the Activity Bar with image preview, quality slider, format selector, crop tool, EXIF viewer, and batch conversion.
-
-![Sidebar Panel](https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/sidebar-panel.png)
-
-- **File & folder selection** — pick individual files or scan entire folders
-- **Image preview** with dimensions and file size
+- **Multi-file & multi-folder selection** — pick files or scan multiple folders at once
+- **Multi-select** — checkbox to select which files to convert, with Select All / None
+- **Image preview** with zoom (scroll wheel or +/- buttons), rotate, and crop
 - **Quality slider** with real-time estimated output size
-- **Output format selector** — choose WebP, JPEG, or PNG
-- **Visual crop tool** — draw a crop region or enter exact coordinates
+- **Output format selector** — WebP, JPEG, or PNG
+- **Visual crop tool** — draw a crop region or enter exact pixel coordinates
 - **EXIF viewer** — camera, lens, exposure, ISO, GPS, and more
 - **Batch conversion** with progress tracking
 
-### Context Menu Integration
-
-Right-click any image in the Explorer or editor tab to convert instantly.
-
-![Context Menu](https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/context-menu.png)
-
-- **Convert to WebP** — instant conversion with configured quality
-- **Convert to WebP (Select Quality...)** — choose quality before converting
-- **Convert All Images in Folder to WebP** — batch convert from folder context menu
-
 ### Custom Image Editor
 
-Open any supported image with **"Reopen Editor With..."** to get a full conversion UI with EXIF data.
+Open any image with **"Reopen Editor With..." > lwebp Image Editor** to get a full editing UI.
 
-![Image Editor](https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/image-editor.png)
+<img src="https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/image-editor.png" width="600" />
 
-- Full image preview with metadata
-- EXIF data display (camera, lens, exposure, ISO, GPS)
-- One-click conversion with format and quality options
-- Estimated output size before converting
+- **Rotate** left/right with continuous rotation support
+- **Zoom** in/out with buttons or scroll wheel (25%-400%)
+- **Crop** — draw region on preview or enter exact coordinates
+- **File navigation** — browse other images in the same folder
+- **EXIF data** display
+- **Convert** with format, quality, and crop options
 
-### Multi-Format Conversion
-Convert between image formats with a single click. Supports input from **PNG, JPG, GIF, BMP, TIFF, AVIF, HEIC/HEIF** and output to **WebP, JPEG, PNG**.
+### Context Menu
 
-### Smart Output Naming
-When converting to the same format (e.g., PNG to PNG), the output file is automatically named with a `_converted` suffix to avoid conflicts.
+Right-click any image in Explorer or editor tab:
 
-## Usage
-
-### From the Sidebar
-1. Click the **lwebp** icon in the Activity Bar
-2. Select files or a folder
-3. Choose output format and quality
-4. Optionally enable crop and draw a region
-5. Click **Convert**
-
-### From Context Menu
-1. Right-click an image file in the Explorer
-2. Select **Convert to WebP** or **Convert to WebP (Select Quality...)**
-
-### From the Image Editor
-1. Open an image file
-2. Use **"Reopen Editor With..." > lwebp Image Editor**
-3. Adjust format and quality, then click **Convert**
-
-## Extension Settings
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `lwebp.quality` | `80` | Output quality (0-100). Higher values = larger, better quality files. |
-| `lwebp.deleteOriginal` | `false` | Delete the original file after successful conversion. |
-| `lwebp.outputDirectory` | `""` | Output directory for converted files. Empty = same directory as original. |
+- **Convert to WebP** — instant conversion
+- **Convert to WebP (Select Quality...)** — choose quality first
+- **Convert All Images in Folder** — batch convert entire folder
 
 ## Supported Formats
 
-**Input:** PNG, JPG/JPEG, GIF (animated), BMP, TIFF/TIF, AVIF, HEIC/HEIF
+| Input | Output |
+|-------|--------|
+| PNG, JPG, GIF, BMP, TIFF, AVIF, HEIC/HEIF | WebP, JPEG, PNG |
 
-**Output:** WebP, JPEG, PNG
+HEIC/HEIF works on all platforms — native sharp on macOS, automatic fallback to `heic-convert` on Windows/Linux.
 
-## Requirements
+## Usage
 
-This extension uses [sharp](https://sharp.pixelplumbing.com/) for image processing. Sharp includes prebuilt binaries for most platforms (macOS, Linux, Windows on x64 and arm64).
+### Sidebar
+1. Click the **lwebp** icon in the Activity Bar
+2. Select files or folders
+3. Check/uncheck files you want to convert
+4. Choose format, quality, and optionally crop
+5. Click **Convert**
+
+### Image Editor
+1. Open an image file
+2. **"Reopen Editor With..." > lwebp Image Editor**
+3. Rotate, zoom, crop as needed
+4. Click **Convert**
+
+## Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `lwebp.quality` | `80` | Output quality (0-100) |
+| `lwebp.deleteOriginal` | `false` | Delete original after conversion |
+| `lwebp.outputDirectory` | `""` | Output directory (empty = same as original) |
+
+## Platform Support
+
+Published as platform-specific packages for optimal size:
+- macOS (Apple Silicon & Intel)
+- Linux (x64 & ARM64)
+- Windows (x64)
 
 ## License
 
