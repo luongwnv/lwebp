@@ -127,8 +127,16 @@ export class ConversionService {
 
   async getExifData(filePath: string): Promise<ExifData> {
     const sharp = (await import('sharp')).default;
-    const input = await readImageInput(filePath);
-    const metadata = await sharp(input).metadata();
+    // Read EXIF from original file — not the converted buffer, which loses EXIF
+    const rawBuffer = await fs.readFile(filePath);
+    let metadata;
+    try {
+      metadata = await sharp(rawBuffer).metadata();
+    } catch {
+      // If sharp can't read metadata from original (e.g. HEIC on Windows), try converted
+      const input = await readImageInput(filePath);
+      metadata = await sharp(input).metadata();
+    }
     const exif = metadata.exif ? this._parseExifBuffer(metadata.exif) : {};
 
     return {
