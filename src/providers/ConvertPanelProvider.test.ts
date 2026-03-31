@@ -166,6 +166,7 @@ describe('ConvertPanelProvider', () => {
       expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith({
         type: 'previewError',
         filePath: '/bad.png',
+        error: 'fail',
       });
     });
 

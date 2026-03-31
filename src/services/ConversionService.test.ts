@@ -42,10 +42,18 @@ jest.mock('exif-reader', () => {
   });
 }, { virtual: true });
 
+// Mock heic-convert
+jest.mock('heic-convert', () => ({
+  default: jest.fn().mockResolvedValue(new ArrayBuffer(8)),
+  __esModule: true,
+}));
+
 // Mock fs/promises
 jest.mock('fs/promises', () => ({
   stat: jest.fn().mockResolvedValue({ size: 10000 }),
+  readFile: jest.fn().mockResolvedValue(Buffer.from('fake-image')),
   readdir: jest.fn(),
+  writeFile: jest.fn().mockResolvedValue(undefined),
 }));
 
 import * as fs from 'fs/promises';
@@ -143,7 +151,7 @@ describe('ConversionService', () => {
     it('should convert file with specified quality', async () => {
       const result = await service.convertFile('/photos/image.png', 80);
 
-      expect(mockSharp).toHaveBeenCalledWith('/photos/image.png', undefined);
+      expect(mockSharp).toHaveBeenCalledWith(expect.any(Buffer), undefined);
       expect(mockWebp).toHaveBeenCalledWith({ quality: 80 });
       expect(mockToFile).toHaveBeenCalledWith(path.join('/photos', 'image.webp'));
       expect(result.inputPath).toBe('/photos/image.png');
@@ -156,7 +164,7 @@ describe('ConversionService', () => {
     it('should use animated option for GIF files', async () => {
       await service.convertFile('/photos/anim.gif', 80);
 
-      expect(mockSharp).toHaveBeenCalledWith('/photos/anim.gif', { animated: true });
+      expect(mockSharp).toHaveBeenCalledWith(expect.any(Buffer), { animated: true });
     });
 
     it('should apply crop when provided', async () => {

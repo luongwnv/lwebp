@@ -3,7 +3,30 @@ import * as path from 'path';
 
 export const SUPPORTED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.tif', '.avif', '.heic', '.heif'];
 
+const HEIF_EXTENSIONS = ['.heic', '.heif'];
+
 export type OutputFormat = 'webp' | 'jpg' | 'png';
+
+function isHeif(filePath: string): boolean {
+  return HEIF_EXTENSIONS.includes(path.extname(filePath).toLowerCase());
+}
+
+async function readImageInput(filePath: string): Promise<Buffer> {
+  const fileBuffer = await fs.readFile(filePath);
+  if (!isHeif(filePath)) {
+    return fileBuffer;
+  }
+  // Try sharp first (works on macOS), fall back to heic-convert
+  try {
+    const sharp = (await import('sharp')).default;
+    await sharp(fileBuffer).metadata();
+    return fileBuffer;
+  } catch {
+    const convert = (await import('heic-convert')).default;
+    const result = await convert({ buffer: fileBuffer, format: 'JPEG', quality: 1 });
+    return Buffer.from(result);
+  }
+}
 
 export const OUTPUT_FORMATS: { value: OutputFormat; label: string; ext: string }[] = [
   { value: 'webp', label: 'WebP', ext: '.webp' },
@@ -89,7 +112,8 @@ export class ConversionService {
 
   async getImageInfo(filePath: string): Promise<ImageInfo> {
     const sharp = (await import('sharp')).default;
-    const metadata = await sharp(filePath).metadata();
+    const input = await readImageInput(filePath);
+    const metadata = await sharp(input).metadata();
     const stat = await fs.stat(filePath);
 
     return {
@@ -102,7 +126,8 @@ export class ConversionService {
 
   async getExifData(filePath: string): Promise<ExifData> {
     const sharp = (await import('sharp')).default;
-    const metadata = await sharp(filePath).metadata();
+    const input = await readImageInput(filePath);
+    const metadata = await sharp(input).metadata();
     const exif = metadata.exif ? this._parseExifBuffer(metadata.exif) : {};
 
     return {
@@ -140,7 +165,8 @@ export class ConversionService {
 
   async estimateOutputSize(filePath: string, quality: number, format: OutputFormat = 'webp'): Promise<number> {
     const sharp = (await import('sharp')).default;
-    let pipeline = sharp(filePath).rotate();
+    const input = await readImageInput(filePath);
+    let pipeline = sharp(input).rotate();
     pipeline = this._applyOutputFormat(pipeline, format, quality);
     const buffer = await pipeline.toBuffer();
     return buffer.length;
@@ -153,7 +179,8 @@ export class ConversionService {
 
   async getImageBase64(filePath: string, maxWidth = 400): Promise<string> {
     const sharp = (await import('sharp')).default;
-    const buffer = await sharp(filePath)
+    const input = await readImageInput(filePath);
+    const buffer = await sharp(input)
       .rotate() // auto-rotate based on EXIF orientation
       .resize({ width: maxWidth, withoutEnlargement: true })
       .png()
@@ -173,7 +200,8 @@ export class ConversionService {
     const inputSize = inputStat.size;
 
     const ext = path.extname(inputPath).toLowerCase();
-    let pipeline = sharp(inputPath, ext === '.gif' ? { animated: true } : undefined)
+    const input = await readImageInput(inputPath);
+    let pipeline = sharp(input, ext === '.gif' ? { animated: true } : undefined)
       .rotate(); // auto-rotate based on EXIF orientation
 
     if (crop) {
@@ -249,7 +277,8 @@ export class ConversionService {
 
   async rotateImage(filePath: string, angle: number): Promise<void> {
     const sharp = (await import('sharp')).default;
-    const buffer = await sharp(filePath)
+    const input = await readImageInput(filePath);
+    const buffer = await sharp(input)
       .rotate(angle)
       .toBuffer();
     await fs.writeFile(filePath, buffer);
