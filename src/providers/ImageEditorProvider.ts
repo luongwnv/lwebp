@@ -32,6 +32,22 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     const filePath = document.uri.fsPath;
     const fileName = path.basename(filePath);
 
+    // Find all images in the same folder
+    const folderPath = path.dirname(filePath);
+    let siblingImages: string[] = [];
+    try {
+      const files = await vscode.workspace.fs.readDirectory(vscode.Uri.file(folderPath));
+      siblingImages = files
+        .filter(([name, type]) => type === vscode.FileType.File && this._service.isSupportedImage(name))
+        .map(([name]) => path.join(folderPath, name))
+        .sort();
+    } catch {
+      // Folder read failed, will just show current image
+    }
+
+    const currentIndex = siblingImages.indexOf(filePath);
+    const hasMultipleImages = siblingImages.length > 1;
+
     // Load image data
     let base64 = '';
     let info = { width: 0, height: 0, size: 0, format: '' };
@@ -53,12 +69,41 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     }
 
     const fontUri = webviewPanel.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'fonts', 'FSPixelSansUnicode-Regular.ttf'));
-    webviewPanel.webview.html = this._getHtml(fileName, base64, info, exif, fontUri);
+    webviewPanel.webview.html = this._getHtml(fileName, base64, info, exif, fontUri, hasMultipleImages, currentIndex, siblingImages.length);
 
     const postMessage = (msg: unknown) => webviewPanel.webview.postMessage(msg);
 
     webviewPanel.webview.onDidReceiveMessage(async (message) => {
       switch (message.type) {
+        case 'navigateImage': {
+          if (message.newIndex !== undefined && siblingImages[message.newIndex]) {
+            const newFilePath = siblingImages[message.newIndex];
+            const newFileName = path.basename(newFilePath);
+            try {
+              const [newBase64, newInfo, newExif] = await Promise.all([
+                this._service.getImageBase64(newFilePath, 800),
+                this._service.getImageInfo(newFilePath),
+                this._service.getExifData(newFilePath).catch(() => ({})),
+              ]);
+              postMessage({
+                type: 'imageLoaded',
+                fileName: newFileName,
+                base64: newBase64,
+                info: newInfo,
+                exif: newExif,
+                index: message.newIndex,
+                total: siblingImages.length,
+              });
+              // Update internal tracking for the new image
+              siblingImages[message.newIndex];
+            } catch (err) {
+              const errorMsg = err instanceof Error ? err.message : String(err);
+              postMessage({ type: 'error', message: `Failed to load ${newFileName}: ${errorMsg}` });
+            }
+          }
+          break;
+        }
+
         case 'convert': {
           const config = vscode.workspace.getConfiguration('lwebp');
           const quality = message.quality ?? config.get<number>('quality', 80);
@@ -89,6 +134,100 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
             const errorMsg = err instanceof Error ? err.message : String(err);
             postMessage({ type: 'error', message: errorMsg });
             vscode.window.showErrorMessage(`Conversion failed: ${errorMsg}`);
+          }
+          break;
+        }
+
+        case 'navigateImage': {
+          if (message.newIndex !== undefined && siblingImages[message.newIndex]) {
+            const newFilePath = siblingImages[message.newIndex];
+            const newFileName = path.basename(newFilePath);
+            try {
+              const [newBase64, newInfo, newExif] = await Promise.all([
+                this._service.getImageBase64(newFilePath, 800),
+                this._service.getImageInfo(newFilePath),
+                this._service.getExifData(newFilePath).catch(() => ({})),
+              ]);
+              postMessage({
+                type: 'imageLoaded',
+                fileName: newFileName,
+                base64: newBase64,
+                info: newInfo,
+                exif: newExif,
+                index: message.newIndex,
+                total: siblingImages.length,
+              });
+              // Update internal tracking for the new image
+              siblingImages[message.newIndex];
+            } catch (err) {
+              const errorMsg = err instanceof Error ? err.message : String(err);
+              postMessage({ type: 'error', message: `Failed to load ${newFileName}: ${errorMsg}` });
+            }
+          }
+          break;
+        }
+
+        case 'getThumbnail': {
+          if (message.index !== undefined && siblingImages[message.index]) {
+            try {
+              const thumbPath = siblingImages[message.index];
+              const thumbBase64 = await this._service.getImageBase64(thumbPath, 60);
+              postMessage({
+                type: 'thumbnailLoaded',
+                index: message.index,
+                base64: thumbBase64,
+              });
+            } catch {
+              // Ignore thumbnail errors
+            }
+          }
+          break;
+        }
+
+        case 'convertMultiple': {
+          if (!message.selectedIndices || message.selectedIndices.length === 0) { return; }
+          const config = vscode.workspace.getConfiguration('lwebp');
+          const quality = message.quality ?? config.get<number>('quality', 80);
+          const format: OutputFormat = message.format ?? 'webp';
+          const outputDir = config.get<string>('outputDirectory', '') || undefined;
+          const crop = message.crop;
+          const deleteOriginal = config.get<boolean>('deleteOriginal', false);
+
+          const filesToConvert = message.selectedIndices.map((idx: number) => siblingImages[idx]).filter(Boolean);
+          
+          try {
+            const results = [];
+            for (const fileToConvert of filesToConvert) {
+              try {
+                const result = await this._service.convertFile(fileToConvert, quality, outputDir, crop, format);
+                results.push({
+                  inputName: path.basename(fileToConvert),
+                  outputName: path.basename(result.outputPath),
+                  inputSize: result.inputSize,
+                  outputSize: result.outputSize,
+                  savings: result.savings,
+                  success: true,
+                });
+                if (deleteOriginal) {
+                  await vscode.workspace.fs.delete(vscode.Uri.file(fileToConvert));
+                }
+              } catch (err) {
+                results.push({
+                  inputName: path.basename(fileToConvert),
+                  error: err instanceof Error ? err.message : String(err),
+                  success: false,
+                });
+              }
+            }
+            const formatLabel = OUTPUT_FORMATS.find(f => f.value === format)?.label ?? format;
+            postMessage({
+              type: 'convertMultipleDone',
+              results,
+              formatLabel,
+            });
+          } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            postMessage({ type: 'error', message: errorMsg });
           }
           break;
         }
@@ -135,7 +274,7 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private _getHtml(fileName: string, base64: string, info: any, exif: any, fontUri: vscode.Uri): string {
+  private _getHtml(fileName: string, base64: string, info: any, exif: any, fontUri: vscode.Uri, hasMultipleImages: boolean, currentIndex: number, totalImages: number): string {
     const formatSize = (bytes: number) => {
       if (bytes < 1024) { return bytes + ' B'; }
       if (bytes < 1024 * 1024) { return (bytes / 1024).toFixed(1) + ' KB'; }
@@ -185,6 +324,22 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
     .header h1 { font-size: 26px; color: var(--pixel-accent); text-shadow: 1px 1px 0px rgba(0,0,0,0.1); }
     .header .file-info { font-size: 20px; color: var(--pixel-text-dim); }
+    
+    /* Carousel Navigation - Editor Header */
+    .carousel-nav { display: none; align-items: center; gap: 6px; }
+    .carousel-nav.active { display: flex; }
+    .carousel-nav button {
+      padding: 4px 6px; font-size: 18px; min-width: 28px; height: 28px;
+      background: var(--pixel-btn-bg); color: var(--pixel-text);
+      border: 2px solid var(--pixel-border); border-radius: 0;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 1px 1px 0px rgba(0,0,0,0.1); transition: background 0.1s;
+      font-family: 'FS Pixel Sans', monospace;
+    }
+    .carousel-nav button:hover { background: var(--pixel-btn-hover); border-color: var(--pixel-border-light); }
+    .carousel-nav button:disabled { opacity: 0.35; cursor: not-allowed; }
+    .carousel-counter { font-size: 18px; color: var(--pixel-text-dim); min-width: 60px; text-align: center; font-family: 'FS Pixel Sans', monospace; }
+    
     #infoText { font-size: 20px; color: var(--pixel-text-dim); }
 
     /* Preview */
@@ -271,6 +426,8 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     .estimate { font-size: 20px; color: var(--pixel-text-dim); margin-top: 10px; }
     .est-savings { color: #228855; }
     .est-increase { color: #dd2222; }
+    .est-savings { color: #228855; }
+    .est-increase { color: #dd2222; }
     button.convert-btn {
       padding: 8px 20px; border: 2px solid #aa4400; border-radius: 0;
       background: #dd6600; color: #fff; font-size: 22px; font-family: 'FS Pixel Sans', monospace;
@@ -281,13 +438,35 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     .result { margin-top: 10px; padding: 8px 12px; font-size: 20px; background: var(--pixel-panel); border: 2px solid var(--pixel-border); border-radius: 0; }
     .result.success { border-left: 3px solid #228855; }
     .result.error { border-left: 3px solid #dd2222; }
+
+    /* Preview Carousel - Thumbnails at bottom */
+    .preview-footer { display: ${hasMultipleImages ? 'flex' : 'none'}; gap: 8px; margin-top: 16px; align-items: center; background: var(--pixel-panel); border: 2px solid var(--pixel-border); padding: 8px; box-shadow: var(--pixel-shadow); flex-wrap: wrap; }
+    .carousel-thumb-nav { padding: 6px 10px; font-size: 20px; min-width: 36px; height: 36px; background: var(--pixel-btn-bg); color: var(--pixel-text); border: 2px solid var(--pixel-border); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 1px 1px 0px rgba(0,0,0,0.1); transition: background 0.1s; font-family: 'FS Pixel Sans', monospace; flex-shrink: 0; }
+    .carousel-thumb-nav:hover { background: #f0cc9f; border-color: var(--pixel-border-light); }
+    .carousel-thumb-nav:disabled { opacity: 0.35; cursor: not-allowed; }
+    .thumbnail-carousel { display: flex; gap: 8px; flex: 1; overflow-x: auto; align-items: center; min-height: 110px; padding: 4px; scrollbar-width: thin; basis: 100%; }
+    .thumbnail-carousel::-webkit-scrollbar { height: 6px; }
+    .thumbnail-carousel::-webkit-scrollbar-track { background: #e0e0e0; }
+    .thumbnail-carousel::-webkit-scrollbar-thumb { background: #999; border-radius: 3px; }
+    .thumbnail-item { position: relative; min-width: 96px; width: 96px; height: 96px; border: 2px solid var(--pixel-border); cursor: pointer; background: #f5f5f5; background-size: cover; background-position: center; transition: all 0.1s; flex-shrink: 0; }
+    .thumbnail-item:hover { border-color: var(--pixel-border-light); transform: scale(1.03); }
+    .thumbnail-item.active { border-color: var(--pixel-accent); box-shadow: 0 0 4px var(--pixel-accent), inset 0 0 4px var(--pixel-accent); }
+    .thumbnail-item.selected { background-color: rgba(204, 102, 0, 0.2); border: 3px solid var(--pixel-accent); }
+    .thumbnail-checkbox { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; background: rgba(255,255,255,0.95); border: 2px solid var(--pixel-accent); cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--pixel-accent); font-size: 18px; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <h1>${fileName}</h1>
-      <span id="infoText">${info.width} x ${info.height} · ${info.format.toUpperCase()} · ${formatSize(info.size)}</span>
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <div class="carousel-nav ${hasMultipleImages ? 'active' : ''}" id="carouselNav">
+          <button id="btnCarouselPrev" title="Previous image">&#x25C0;</button>
+          <div class="carousel-counter" id="carouselCounter">${currentIndex + 1} / ${totalImages}</div>
+          <button id="btnCarouselNext" title="Next image">&#x25B6;</button>
+        </div>
+        <span id="infoText">${info.width} x ${info.height} · ${info.format.toUpperCase()} · ${formatSize(info.size)}</span>
+      </div>
     </div>
 
     <div class="preview-wrapper">
@@ -359,6 +538,12 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
       <div class="estimate" id="estimate" style="display:none;"></div>
       <div id="resultArea"></div>
     </div>
+
+    <div class="preview-footer" id="previewFooter">
+      <button class="carousel-thumb-nav" id="btnThumbPrev" title="Previous">&#x25C0;</button>
+      <div class="thumbnail-carousel" id="thumbnailCarousel"></div>
+      <button class="carousel-thumb-nav" id="btnThumbNext" title="Next">&#x25B6;</button>
+    </div>
   </div>
 
   <script>
@@ -383,12 +568,94 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     const cropW = document.getElementById('cropW');
     const cropH = document.getElementById('cropH');
     const btnZoomReset = document.getElementById('btnZoomReset');
+    const btnCarouselPrev = document.getElementById('btnCarouselPrev');
+    const btnCarouselNext = document.getElementById('btnCarouselNext');
+    const carouselCounter = document.getElementById('carouselCounter');
 
     var imageInfo = { width: ${info.width}, height: ${info.height}, size: ${info.size}, format: '${info.format}' };
     var cropEnabled = false;
     var cropData = null;
     var zoomLevel = 100;
+    var currentImageIndex = ${currentIndex};
+    var totalImages = ${totalImages};
     let estimateTimer = null;
+
+    function navigateCarousel(direction) {
+      var newIndex = currentImageIndex + direction;
+      if (newIndex >= 0 && newIndex < totalImages) {
+        vscode.postMessage({ type: 'navigateImage', newIndex: newIndex });
+      }
+    }
+
+    function updateCarouselUI() {
+      if (btnCarouselPrev) btnCarouselPrev.disabled = currentImageIndex === 0;
+      if (btnCarouselNext) btnCarouselNext.disabled = currentImageIndex === totalImages - 1;
+      if (carouselCounter) carouselCounter.textContent = (currentImageIndex + 1) + ' / ' + totalImages;
+      renderThumbnailCarousel();
+    }
+
+    // Thumbnail carousel
+    const thumbnailCarousel = document.getElementById('thumbnailCarousel');
+    const btnThumbPrev = document.getElementById('btnThumbPrev');
+    const btnThumbNext = document.getElementById('btnThumbNext');
+    const previewFooter = document.getElementById('previewFooter');
+
+    var selectedThumbnails = new Set();
+
+    function renderThumbnailCarousel() {
+      if (!previewFooter || totalImages <= 1) return;
+      thumbnailCarousel.innerHTML = '';
+      for (let i = 0; i < totalImages; i++) {
+        const thumb = document.createElement('div');
+        thumb.className = 'thumbnail-item' + (i === currentImageIndex ? ' active' : '') + (selectedThumbnails.has(i) ? ' selected' : '');
+        thumb.dataset.index = String(i);
+        thumb.style.backgroundImage = 'linear-gradient(135deg, #f0e4d8, #e8e8f0)';
+        
+        // Create checkbox overlay
+        const checkbox = document.createElement('div');
+        checkbox.className = 'thumbnail-checkbox';
+        checkbox.textContent = selectedThumbnails.has(i) ? '✓' : '';
+        checkbox.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (selectedThumbnails.has(i)) {
+            selectedThumbnails.delete(i);
+          } else {
+            selectedThumbnails.add(i);
+          }
+          renderThumbnailCarousel();
+        });
+        thumb.appendChild(checkbox);
+        
+        thumb.addEventListener('click', () => navigateCarousel(i - currentImageIndex));
+        thumbnailCarousel.appendChild(thumb);
+        // Load thumbnail
+        vscode.postMessage({ type: 'getThumbnail', index: i });
+      }
+      // Update thumbnail nav buttons
+      if (btnThumbPrev && btnThumbNext) {
+        const hasScroll = thumbnailCarousel.scrollWidth > thumbnailCarousel.clientWidth;
+        btnThumbPrev.style.display = hasScroll ? 'flex' : 'none';
+        btnThumbNext.style.display = hasScroll ? 'flex' : 'none';
+      }
+      updateConvertButton();
+    }
+
+    function updateConvertButton() {
+      if (selectedThumbnails.size > 0) {
+        convertBtn.textContent = '\u25B6 Convert ' + selectedThumbnails.size + ' files';
+      } else {
+        convertBtn.textContent = '\u25B6 Convert';
+      }
+    }
+
+    if (btnThumbPrev && btnThumbNext) {
+      btnThumbPrev.addEventListener('click', () => {
+        thumbnailCarousel.scrollBy({ left: -60, behavior: 'smooth' });
+      });
+      btnThumbNext.addEventListener('click', () => {
+        thumbnailCarousel.scrollBy({ left: 60, behavior: 'smooth' });
+      });
+    }
 
     // Zoom — dùng pixel size để scroll cả ngang + dọc
     var baseWidth = 0;
@@ -438,6 +705,20 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     var isRotating = false;
     document.getElementById('btnRotateLeft').addEventListener('click', function() { queueRotation(-90); });
     document.getElementById('btnRotateRight').addEventListener('click', function() { queueRotation(90); });
+
+    // Carousel navigation
+    if (btnCarouselPrev && btnCarouselNext) {
+      btnCarouselPrev.addEventListener('click', function() { navigateCarousel(-1); });
+      btnCarouselNext.addEventListener('click', function() { navigateCarousel(1); });
+    }
+
+    // Keyboard navigation for carousel
+    document.addEventListener('keydown', function(e) {
+      if (totalImages > 1) {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); navigateCarousel(-1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); navigateCarousel(1); }
+      }
+    });
 
     function queueRotation(angle) {
       pendingRotation = (pendingRotation + angle) % 360;
@@ -550,6 +831,10 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
       resultArea.innerHTML = '';
       var msg = { type: 'convert', quality: parseInt(qualitySlider.value), format: formatSelect.value };
       if (cropData) msg.crop = cropData;
+      if (selectedThumbnails.size > 0) {
+        msg.type = 'convertMultiple';
+        msg.selectedIndices = Array.from(selectedThumbnails);
+      }
       vscode.postMessage(msg);
     });
 
@@ -576,6 +861,25 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     window.addEventListener('message', function(event) {
       var msg = event.data;
       switch (msg.type) {
+        case 'imageLoaded': {
+          currentImageIndex = msg.index;
+          totalImages = msg.total;
+          if (previewImg) { previewImg.src = msg.base64; previewImg.style.transform = ''; }
+          updateInfo(msg.info);
+          document.querySelector('.container h1').textContent = msg.fileName;
+          clearCrop();
+          resetZoom();
+          updateCarouselUI();
+          requestEstimate();
+          break;
+        }
+        case 'thumbnailLoaded': {
+          const thumbEl = thumbnailCarousel.querySelector('[data-index="' + msg.index + '"]');
+          if (thumbEl) {
+            thumbEl.style.backgroundImage = 'url(' + msg.base64 + ')';
+          }
+          break;
+        }
         case 'estimatedSize': {
           var origSize = msg.originalSize; var estSize = msg.estimatedSize;
           var saved = origSize > 0 ? Math.round((1 - estSize / origSize) * 100) : 0;
@@ -604,6 +908,23 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
             msg.outputPath.split('/').pop().split('\\\\').pop() +
             '</strong> (' + formatSize(msg.outputSize) + ', ' + msg.savings + '% savings)</div>';
           break;
+        case 'convertMultipleDone':
+          convertBtn.disabled = false;
+          convertBtn.textContent = '\u25B6 Convert';
+          var html = '<div style="background: #f5f5f5; padding: 10px; margin-top: 8px;">';
+          html += '<div style="font-weight: bold; margin-bottom: 8px; color: var(--pixel-accent);">' + msg.formatLabel + ' - Batch Convert Results</div>';
+          msg.results.forEach(function(r) {
+            if (r.success) {
+              html += '<div class="result success">' + r.inputName + ' &#8594; ' + r.outputName + ' (' + r.savings + '% saved)</div>';
+            } else {
+              html += '<div class="result error">' + r.inputName + ' - Error: ' + r.error + '</div>';
+            }
+          });
+          html += '</div>';
+          resultArea.innerHTML = html;
+          selectedThumbnails.clear();
+          renderThumbnailCarousel();
+          break;
         case 'error':
           convertBtn.disabled = false;
           convertBtn.textContent = '\u25B6 Convert';
@@ -612,6 +933,7 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
       }
     });
 
+    updateCarouselUI();
     requestEstimate();
   </script>
 </body>

@@ -369,7 +369,21 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     .file-item .remove { cursor: pointer; opacity: 0.6; margin-left: 6px; font-size: 22px; }
     .file-item .remove:hover { opacity: 1; color: #cc3333; }
 
-    .file-count { font-size: 20px; color: var(--pixel-text-dim); margin-bottom: 6px; }
+    .file-count { font-size: 20px; color: var(--pixel-text-dim); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .select-actions { display: flex; gap: 4px; }
+    .btn-link {
+      background: none; border: none; box-shadow: none; width: auto;
+      padding: 0 4px; font-size: 16px; color: var(--pixel-accent);
+      text-decoration: underline; cursor: pointer;
+    }
+    .btn-link:hover { opacity: 0.7; }
+    .file-item .check {
+      width: 16px; height: 16px; border: 2px solid var(--pixel-border); border-radius: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 12px; margin-right: 6px; flex-shrink: 0; cursor: pointer;
+      background: var(--pixel-panel);
+    }
+    .file-item.checked .check { background: var(--pixel-accent); color: #fff; border-color: var(--pixel-accent); }
 
     label { display: block; font-size: 20px; margin-bottom: 4px; color: var(--pixel-text); }
 
@@ -515,7 +529,13 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       <button class="btn-secondary" id="btnSelectFiles">&#x25A3; Files</button>
       <button class="btn-secondary" id="btnSelectFolder">&#x25A8; Folder</button>
     </div>
-    <div id="fileCount" class="file-count" style="display:none;"></div>
+    <div id="fileCount" class="file-count" style="display:none;">
+      <span id="fileCountText"></span>
+      <span class="select-actions">
+        <button class="btn-link" id="btnSelectAll">All</button>
+        <button class="btn-link" id="btnDeselectAll">None</button>
+      </span>
+    </div>
     <div id="fileList" class="file-list empty">No files selected</div>
   </div>
 
@@ -605,7 +625,8 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
 
     const state = {
       files: [],        // { path, name, size, width, height, format }
-      selectedIndex: -1,
+      selectedIndices: new Set(),  // multi-select indices
+      previewIndex: -1,  // which file is previewed
       converting: false,
       cropEnabled: false,
       cropData: null,    // { left, top, width, height } in real image coords
@@ -618,6 +639,9 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     const btnConvert = document.getElementById('btnConvert');
     const fileList = document.getElementById('fileList');
     const fileCount = document.getElementById('fileCount');
+    const fileCountText = document.getElementById('fileCountText');
+    const btnSelectAll = document.getElementById('btnSelectAll');
+    const btnDeselectAll = document.getElementById('btnDeselectAll');
     const qualitySlider = document.getElementById('quality');
     const qualityValue = document.getElementById('qualityValue');
     const deleteOriginal = document.getElementById('deleteOriginal');
@@ -693,6 +717,17 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
 
     vscode.postMessage({ type: 'getConfig' });
 
+    // Select All / Deselect All
+    btnSelectAll.addEventListener('click', function() {
+      state.selectedIndices.clear();
+      state.files.forEach(function(_, i) { state.selectedIndices.add(i); });
+      renderFileList(); updateUI();
+    });
+    btnDeselectAll.addEventListener('click', function() {
+      state.selectedIndices.clear();
+      renderFileList(); updateUI();
+    });
+
     // Format selector
     outputFormat.addEventListener('change', () => {
       updateUI();
@@ -711,14 +746,15 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
 
     // Convert
     btnConvert.addEventListener('click', () => {
-      if (state.files.length === 0 || state.converting) return;
+      var filesToConvert = getSelectedFiles();
+      if (filesToConvert.length === 0 || state.converting) return;
       state.converting = true;
       updateUI();
       resultsSection.classList.remove('active');
 
       const msg = {
         type: 'convert',
-        files: state.files.map(f => f.path),
+        files: filesToConvert.map(f => f.path),
         quality: parseInt(qualitySlider.value),
         deleteOriginal: deleteOriginal.checked,
         format: outputFormat.value,
@@ -726,6 +762,11 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       if (state.cropData) { msg.crop = state.cropData; }
       vscode.postMessage(msg);
     });
+
+    function getSelectedFiles() {
+      if (state.selectedIndices.size === 0) return state.files;
+      return state.files.filter(function(_, i) { return state.selectedIndices.has(i); });
+    }
 
     // Crop toggle
     btnCropToggle.addEventListener('click', () => {
@@ -749,7 +790,7 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     btnRotateRight.addEventListener('click', () => queueRotation(90));
 
     function queueRotation(angle) {
-      if (state.selectedIndex < 0 || state.converting) return;
+      if (state.previewIndex < 0 || state.converting) return;
       pendingRotation = (pendingRotation + angle) % 360;
       if (pendingRotation < 0) pendingRotation += 360;
       // Instant visual feedback
@@ -760,7 +801,7 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
 
     function flushRotation() {
       if (pendingRotation === 0 || isRotating) return;
-      const file = state.files[state.selectedIndex];
+      const file = state.files[state.previewIndex];
       if (!file) return;
       isRotating = true;
       var angle = pendingRotation;
@@ -875,11 +916,13 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
 
         case 'filesSelected':
           state.files = msg.files || [];
-          state.selectedIndex = -1;
+          state.previewIndex = -1;
+          state.selectedIndices.clear();
+          state.files.forEach(function(_, i) { state.selectedIndices.add(i); });
           renderFileList();
           updateUI();
           previewSection.classList.toggle('active', state.files.length > 0);
-          if (state.files.length > 0) { selectFile(0); }
+          if (state.files.length > 0) { previewFile(0); }
           break;
 
         case 'previewData':
@@ -900,10 +943,10 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
           previewInfo.innerHTML =
             '<span>' + msg.info.width + ' x ' + msg.info.height + '</span>' +
             '<span>' + msg.info.format.toUpperCase() + ' &bull; ' + formatSize(msg.info.size) + '</span>';
-          if (state.selectedIndex >= 0 && state.files[state.selectedIndex]) {
-            state.files[state.selectedIndex].width = msg.info.width;
-            state.files[state.selectedIndex].height = msg.info.height;
-            state.files[state.selectedIndex].size = msg.info.size;
+          if (state.previewIndex >= 0 && state.files[state.previewIndex]) {
+            state.files[state.previewIndex].width = msg.info.width;
+            state.files[state.previewIndex].height = msg.info.height;
+            state.files[state.previewIndex].size = msg.info.size;
             renderFileList();
           }
           clearCrop();
@@ -923,8 +966,8 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
           break;
 
         case 'estimatedSize':
-          if (state.selectedIndex >= 0 && state.files[state.selectedIndex]) {
-            var origSize = state.files[state.selectedIndex].size;
+          if (state.previewIndex >= 0 && state.files[state.previewIndex]) {
+            var origSize = state.files[state.previewIndex].size;
             var estSize = msg.estimatedSize;
             var saved = origSize > 0 ? Math.round((1 - estSize / origSize) * 100) : 0;
             var savingsClass = saved > 0 ? 'est-savings' : 'est-increase';
@@ -963,8 +1006,18 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       }
     });
 
-    function selectFile(index) {
-      state.selectedIndex = index;
+    function toggleSelect(index) {
+      if (state.selectedIndices.has(index)) {
+        state.selectedIndices.delete(index);
+      } else {
+        state.selectedIndices.add(index);
+      }
+      renderFileList();
+      updateUI();
+    }
+
+    function previewFile(index) {
+      state.previewIndex = index;
       renderFileList();
       const file = state.files[index];
       if (!file) return;
@@ -983,10 +1036,10 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     }
 
     function requestEstimate() {
-      if (state.selectedIndex < 0 || !state.files[state.selectedIndex]) return;
+      if (state.previewIndex < 0 || !state.files[state.previewIndex]) return;
       if (estimateTimer) clearTimeout(estimateTimer);
       estimateTimer = setTimeout(function() {
-        var file = state.files[state.selectedIndex];
+        var file = state.files[state.previewIndex];
         if (file) {
           vscode.postMessage({
             type: 'estimateSize',
@@ -1042,15 +1095,18 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       }
 
       fileList.className = 'file-list';
-      fileCount.style.display = 'block';
+      fileCount.style.display = '';
 
+      var selCount = state.selectedIndices.size;
       const totalSize = state.files.reduce(function(s, f) { return s + (f.size || 0); }, 0);
-      fileCount.textContent = state.files.length + ' file(s) &bull; ' + formatSize(totalSize);
-      fileCount.innerHTML = fileCount.textContent;
+      fileCountText.innerHTML = state.files.length + ' file(s) &bull; ' + formatSize(totalSize) +
+        (selCount > 0 && selCount < state.files.length ? ' &bull; <strong>' + selCount + ' selected</strong>' : '');
 
       fileList.innerHTML = state.files.map(function(f, i) {
-        var selected = i === state.selectedIndex ? ' selected' : '';
-        return '<div class="file-item' + selected + '" data-index="' + i + '">' +
+        var previewing = i === state.previewIndex ? ' selected' : '';
+        var checked = state.selectedIndices.has(i) ? ' checked' : '';
+        return '<div class="file-item' + previewing + checked + '" data-index="' + i + '">' +
+          '<span class="check" data-index="' + i + '">' + (state.selectedIndices.has(i) ? '\u2714' : '') + '</span>' +
           '<span class="name" title="' + f.path + '">' + f.name + '</span>' +
           (f.width ? '<span class="file-dims">' + f.width + 'x' + f.height + '</span>' : '') +
           '<span class="file-size">' + formatSize(f.size) + '</span>' +
@@ -1058,10 +1114,16 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
         '</div>';
       }).join('');
 
+      // Click on check = toggle select, click on name = preview
       fileList.querySelectorAll('.file-item').forEach(function(el) {
         el.addEventListener('click', function(e) {
           if (e.target.classList.contains('remove')) return;
-          selectFile(parseInt(el.dataset.index));
+          var idx = parseInt(el.dataset.index);
+          if (e.target.classList.contains('check')) {
+            toggleSelect(idx);
+          } else {
+            previewFile(idx);
+          }
         });
       });
 
@@ -1069,21 +1131,28 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
         el.addEventListener('click', function(e) {
           e.stopPropagation();
           var idx = parseInt(el.dataset.index);
+          state.selectedIndices.delete(idx);
           state.files.splice(idx, 1);
-          if (state.selectedIndex >= state.files.length) state.selectedIndex = state.files.length - 1;
+          // Re-index selectedIndices
+          var newSet = new Set();
+          state.selectedIndices.forEach(function(i) { if (i < idx) newSet.add(i); else if (i > idx) newSet.add(i - 1); });
+          state.selectedIndices = newSet;
+          if (state.previewIndex === idx) state.previewIndex = -1;
+          else if (state.previewIndex > idx) state.previewIndex--;
           renderFileList();
           updateUI();
           if (state.files.length === 0) {
             previewSection.classList.remove('active');
-          } else if (state.selectedIndex >= 0) {
-            selectFile(state.selectedIndex);
+          } else if (state.previewIndex >= 0) {
+            previewFile(state.previewIndex);
           }
         });
       });
     }
 
     function updateUI() {
-      btnConvert.disabled = state.files.length === 0 || state.converting;
+      var filesToConvert = getSelectedFiles();
+      btnConvert.disabled = filesToConvert.length === 0 || state.converting;
       btnSelectFiles.disabled = state.converting;
       btnSelectFolder.disabled = state.converting;
       qualitySlider.disabled = state.converting;
@@ -1094,8 +1163,9 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       } else {
         var cropLabel = state.cropData ? ' (cropped)' : '';
         var fmtName = outputFormat.options[outputFormat.selectedIndex].text;
-        btnConvert.textContent = state.files.length > 0
-          ? '\u25B6 Convert ' + state.files.length + ' file(s) to ' + fmtName + cropLabel
+        var count = filesToConvert.length;
+        btnConvert.textContent = count > 0
+          ? '\u25B6 Convert ' + count + ' file(s) to ' + fmtName + cropLabel
           : '\u25B6 Convert to ' + fmtName;
       }
     }
