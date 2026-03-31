@@ -16,10 +16,11 @@ async function readImageInput(filePath: string): Promise<Buffer> {
   if (!isHeif(filePath)) {
     return fileBuffer;
   }
-  // Try sharp first (works on macOS), fall back to heic-convert
+  // Try sharp first (works on macOS with native HEIF support), fall back to heic-convert
   try {
     const sharp = (await import('sharp')).default;
-    await sharp(fileBuffer).metadata();
+    // Test actual decode, not just metadata — some platforms read headers but fail on pixel data
+    await sharp(fileBuffer).raw().toBuffer();
     return fileBuffer;
   } catch {
     const convert = (await import('heic-convert')).default;
