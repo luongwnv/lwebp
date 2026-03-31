@@ -34,6 +34,7 @@ describe('ConvertPanelProvider', () => {
       html: string;
       onDidReceiveMessage: jest.Mock;
       postMessage: jest.Mock;
+      asWebviewUri: jest.Mock;
     };
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,6 +55,7 @@ describe('ConvertPanelProvider', () => {
           return { dispose: jest.fn() };
         }),
         postMessage: jest.fn().mockResolvedValue(true),
+        asWebviewUri: jest.fn().mockImplementation((uri: unknown) => uri),
       },
     };
 
@@ -67,7 +69,7 @@ describe('ConvertPanelProvider', () => {
   it('should set webview HTML content', () => {
     expect(mockWebviewView.webview.html).toContain('<!DOCTYPE html>');
     expect(mockWebviewView.webview.html).toContain('Preview');
-    expect(mockWebviewView.webview.html).toContain('Enable Crop');
+    expect(mockWebviewView.webview.html).toContain('Crop');
     expect(mockWebviewView.webview.html).toContain('Output Format');
     expect(mockWebviewView.webview.html).toContain('outputFormat');
   });

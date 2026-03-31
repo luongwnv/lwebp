@@ -30,6 +30,11 @@ export class Uri {
     return new Uri('file', '', value, '', '');
   }
 
+  static joinPath(base: Uri, ...pathSegments: string[]): Uri {
+    const joined = [base.path, ...pathSegments].join('/');
+    return new Uri(base.scheme, base.authority, joined, base.query, base.fragment);
+  }
+
   constructor(
     public readonly scheme: string,
     public readonly authority: string,

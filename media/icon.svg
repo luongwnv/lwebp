@@ -1,14 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#7c3aed"/>
-      <stop offset="100%" style="stop-color:#4f46e5"/>
-    </linearGradient>
-  </defs>
-  <!-- Background -->
-  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
-  <!-- Stylized L with thick rounded stroke and a flared horizontal -->
-  <path d="M36 24 C36 24, 36 78, 36 78 C36 82, 38 84, 42 84 L92 84" fill="none" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Decorative slash cutting through the L arm -->
-  <line x1="72" y1="96" x2="88" y2="68" stroke="#34d399" stroke-width="6" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <!-- "lw" shape: l taller than w, thicker strokes -->
+  <path d="M1.5 1.5 L1.5 15 C1.5 18 3.5 20 6.5 20 C9.5 20 11.5 18 11.5 15 L11.5 7.5" stroke-width="3.2"/>
+  <path d="M11.5 7.5 L11.5 15 C11.5 18 13.5 20 16.5 20 C19.5 20 21.5 18 21.5 15 L21.5 7.5" stroke-width="3.2"/>
 </svg>

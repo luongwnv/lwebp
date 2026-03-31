@@ -27,6 +27,7 @@ describe('ImageEditorProvider', () => {
       html: string;
       onDidReceiveMessage: jest.Mock;
       postMessage: jest.Mock;
+      asWebviewUri: jest.Mock;
     };
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,6 +48,7 @@ describe('ImageEditorProvider', () => {
           return { dispose: jest.fn() };
         }),
         postMessage: jest.fn().mockResolvedValue(true),
+        asWebviewUri: jest.fn().mockImplementation((uri: unknown) => uri),
       },
     };
   });

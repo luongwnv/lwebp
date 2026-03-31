@@ -270,7 +270,8 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     this._view?.webview.postMessage(message);
   }
 
-  private _getHtmlForWebview(_webview: vscode.Webview): string {
+  private _getHtmlForWebview(webview: vscode.Webview): string {
+    const fontUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'fonts', 'FSPixelSansUnicode-Regular.ttf'));
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -278,102 +279,148 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>lwebp</title>
   <style>
+    @font-face {
+      font-family: 'FS Pixel Sans';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('${fontUri}') format('truetype');
+    }
+    :root {
+      --pixel-bg: #f0f0f0;
+      --pixel-panel: #ffffff;
+      --pixel-border: #888899;
+      --pixel-border-light: #6666aa;
+      --pixel-accent: #cc6600;
+      --pixel-green: #cc4400;
+      --pixel-text: #1a1a2e;
+      --pixel-text-dim: #666688;
+      --pixel-btn-bg: #f0e4d8;
+      --pixel-btn-hover: #d0d0e0;
+      --pixel-active-bg: rgba(204, 102, 0, 0.15);
+      --pixel-shadow: 2px 2px 0px #aaaabb;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: var(--vscode-font-family);
-      font-size: var(--vscode-font-size);
-      color: var(--vscode-foreground);
-      background: var(--vscode-sideBar-background);
-      padding: 12px;
+      font-family: 'FS Pixel Sans', monospace;
+      font-size: 22px;
+      color: var(--pixel-text);
+      background: var(--pixel-bg);
+      padding: 10px;
     }
     h2 {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 24px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
-      color: var(--vscode-sideBarSectionHeader-foreground);
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      color: var(--pixel-accent);
+      text-shadow: 1px 1px 0px rgba(0,0,0,0.1);
     }
-    .section { margin-bottom: 16px; }
+    .section { margin-bottom: 14px; }
 
-    .btn-group { display: flex; gap: 6px; margin-bottom: 12px; }
+    .btn-group { display: flex; gap: 4px; margin-bottom: 10px; }
 
     button {
       display: flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 6px 12px; border: none; border-radius: 4px;
-      font-size: 12px; font-family: var(--vscode-font-family);
-      cursor: pointer; transition: opacity 0.15s; width: 100%;
+      padding: 6px 10px;
+      border: 2px solid var(--pixel-border); border-radius: 0;
+      font-size: 22px; font-family: 'FS Pixel Sans', monospace;
+      cursor: pointer; width: 100%;
+      background: var(--pixel-btn-bg); color: var(--pixel-text);
+      box-shadow: var(--pixel-shadow);
+      transition: background 0.1s, border-color 0.1s;
     }
-    button:hover { opacity: 0.85; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
-    .btn-convert { background: #16a34a; color: #fff; padding: 10px 12px; font-size: 13px; font-weight: 600; }
-    .btn-small { padding: 4px 8px; font-size: 11px; width: auto; }
-    .btn-danger { background: var(--vscode-errorForeground); color: #fff; }
+    button:hover { background: var(--pixel-btn-hover); border-color: var(--pixel-border-light); }
+    button:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-secondary { background: #f5dcc0; color: #553300; border-color: #cc9955; }
+    .btn-secondary:hover { background: #f0cc9f; border-color: #bb7733; }
+    .btn-convert {
+      background: #dd6600; color: #ffffff;
+      border-color: #aa4400; padding: 8px 10px; font-size: 24px;
+      text-shadow: 1px 1px 0px rgba(0,0,0,0.2);
+    }
+    .btn-convert:hover { background: #c45500; }
+    .btn-small { padding: 4px 8px; font-size: 20px; width: auto; }
+    .btn-crop { background: #ffe0b0; color: #884400; border-color: #cc8833; }
+    .btn-crop:hover { background: #ffd090; }
+    .btn-danger { background: #dd2222; border-color: #aa1111; color: #ffffff; text-shadow: 1px 1px 0px rgba(0,0,0,0.2); }
+    .btn-danger:hover { background: #bb1111; }
 
     .file-list {
-      background: var(--vscode-input-background);
-      border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, transparent));
-      border-radius: 4px; padding: 8px; margin-bottom: 12px;
-      max-height: 200px; overflow-y: auto; font-size: 11px;
+      background: var(--pixel-panel);
+      border: 2px solid var(--pixel-border); border-radius: 0;
+      padding: 6px; margin-bottom: 10px;
+      max-height: 200px; overflow-y: auto; font-size: 20px;
+      box-shadow: var(--pixel-shadow);
     }
     .file-list.empty {
-      color: var(--vscode-descriptionForeground); font-style: italic;
-      text-align: center; padding: 16px 8px;
+      color: var(--pixel-text-dim);
+      text-align: center; padding: 14px 6px;
     }
     .file-item {
-      padding: 4px 0; display: flex; justify-content: space-between; align-items: center;
-      cursor: pointer; border-radius: 3px; padding: 4px 6px;
+      padding: 4px 6px; display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; border: 2px solid transparent;
     }
-    .file-item:hover { background: var(--vscode-list-hoverBackground); }
-    .file-item.selected { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
+    .file-item:hover { background: var(--pixel-btn-hover); }
+    .file-item.selected { background: var(--pixel-active-bg); border-color: var(--pixel-accent); }
     .file-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-    .file-item .file-size { color: var(--vscode-descriptionForeground); font-size: 10px; margin-left: 8px; white-space: nowrap; }
-    .file-item .file-dims { color: var(--vscode-descriptionForeground); font-size: 10px; margin-left: 6px; white-space: nowrap; }
-    .file-item .remove { cursor: pointer; opacity: 0.6; margin-left: 6px; font-size: 14px; }
-    .file-item .remove:hover { opacity: 1; }
+    .file-item .file-size { color: var(--pixel-text-dim); font-size: 18px; margin-left: 8px; white-space: nowrap; }
+    .file-item .file-dims { color: var(--pixel-text-dim); font-size: 18px; margin-left: 6px; white-space: nowrap; }
+    .file-item .remove { cursor: pointer; opacity: 0.6; margin-left: 6px; font-size: 22px; }
+    .file-item .remove:hover { opacity: 1; color: #cc3333; }
 
-    .file-count { font-size: 11px; color: var(--vscode-descriptionForeground); margin-bottom: 8px; }
+    .file-count { font-size: 20px; color: var(--pixel-text-dim); margin-bottom: 6px; }
 
-    label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--vscode-foreground); }
+    label { display: block; font-size: 20px; margin-bottom: 4px; color: var(--pixel-text); }
 
-    .quality-control { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-    .quality-control input[type="range"] { flex: 1; accent-color: var(--vscode-button-background); }
-    .quality-value { font-size: 13px; font-weight: 600; min-width: 32px; text-align: right; }
+    .quality-control { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .quality-control input[type="range"] { flex: 1; height: 14px; accent-color: var(--pixel-accent); }
+    .quality-value { font-size: 26px; min-width: 36px; text-align: right; color: var(--pixel-accent); }
 
-    .checkbox-control { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 12px; }
-    .checkbox-control input[type="checkbox"] { accent-color: var(--vscode-button-background); }
+    .checkbox-control { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 20px; }
+    .checkbox-control input[type="checkbox"] { accent-color: var(--pixel-accent); width: 16px; height: 16px; }
 
-    .format-control { margin-bottom: 12px; }
+    .format-control { margin-bottom: 10px; }
     .format-control select {
-      width: 100%; padding: 5px 8px; font-size: 12px;
-      font-family: var(--vscode-font-family);
-      background: var(--vscode-input-background); color: var(--vscode-input-foreground);
-      border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, transparent));
-      border-radius: 4px; cursor: pointer;
+      width: 100%; padding: 6px 8px; font-size: 22px;
+      font-family: 'FS Pixel Sans', monospace;
+      background: var(--pixel-panel); color: var(--pixel-text);
+      border: 2px solid var(--pixel-border); border-radius: 0;
+      cursor: pointer; box-shadow: var(--pixel-shadow);
     }
 
     /* Preview section */
-    .preview-section { display: none; margin-bottom: 16px; }
+    .preview-section { display: none; margin-bottom: 14px; }
     .preview-section.active { display: block; }
     .preview-container {
-      position: relative; background: var(--vscode-input-background);
-      border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, transparent));
-      border-radius: 4px; overflow: hidden; margin-bottom: 8px;
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100px;
+      position: relative; background: #e8e8f0;
+      border: 2px solid var(--pixel-border); border-radius: 0;
+      overflow: auto; margin-bottom: 8px;
+      height: 300px; box-shadow: var(--pixel-shadow);
+      display: grid; place-items: center;
     }
     .preview-container img {
-      max-width: 100%; max-height: 300px; display: block;
+      max-width: 100%; max-height: 100%; display: block;
       user-select: none; -webkit-user-drag: none;
+      image-rendering: auto;
     }
+    .zoom-controls {
+      position: absolute; top: 4px; right: 4px; z-index: 10;
+      display: flex; gap: 2px;
+    }
+    .zoom-controls button {
+      padding: 2px 6px; font-size: 16px; min-width: 26px;
+      background: rgba(255,255,255,0.9); border: 2px solid var(--pixel-border);
+      box-shadow: 1px 1px 0px rgba(0,0,0,0.15); width: auto;
+    }
+    .zoom-controls button:hover { background: #fff; }
     .preview-info {
-      font-size: 11px; color: var(--vscode-descriptionForeground);
+      font-size: 20px; color: var(--pixel-text-dim);
       display: flex; justify-content: space-between; margin-bottom: 8px;
     }
     .preview-loading {
-      padding: 24px; text-align: center;
-      color: var(--vscode-descriptionForeground); font-style: italic;
+      padding: 24px; text-align: center; font-size: 20px;
+      color: var(--pixel-text-dim);
     }
 
     /* Crop overlay */
@@ -383,70 +430,81 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     }
     .crop-overlay.active { display: block; }
     .crop-box {
-      position: absolute; border: 2px dashed #fff;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+      position: absolute; border: 2px dashed var(--pixel-accent);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);
       min-width: 10px; min-height: 10px;
     }
-    .crop-controls { display: flex; gap: 6px; margin-bottom: 8px; }
+    .crop-controls { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
     .crop-inputs { display: none; margin-bottom: 8px; }
     .crop-inputs.active { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .crop-inputs label { font-size: 10px; font-weight: normal; margin-bottom: 2px; }
+    .crop-inputs label { font-size: 18px; margin-bottom: 2px; }
     .crop-inputs input {
-      width: 100%; padding: 3px 6px; font-size: 11px;
-      background: var(--vscode-input-background); color: var(--vscode-input-foreground);
-      border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, transparent));
-      border-radius: 3px;
+      width: 100%; padding: 4px 6px; font-size: 20px;
+      font-family: 'FS Pixel Sans', monospace;
+      background: var(--pixel-panel); color: var(--pixel-text);
+      border: 2px solid var(--pixel-border); border-radius: 0;
     }
 
     /* EXIF */
     .exif-section { margin-top: 8px; }
     .exif-toggle {
-      font-size: 11px; font-weight: 600; cursor: pointer;
-      color: var(--vscode-foreground); padding: 4px 0;
-      text-transform: uppercase; letter-spacing: 0.3px;
+      font-size: 20px; cursor: pointer;
+      color: var(--pixel-accent); padding: 4px 0;
+      text-transform: uppercase; letter-spacing: 1px;
+      font-family: 'FS Pixel Sans', monospace;
     }
     .exif-table {
-      font-size: 11px; margin-top: 6px;
-      background: var(--vscode-input-background);
-      border-radius: 4px; padding: 8px;
-      max-height: 200px; overflow-y: auto;
+      font-size: 19px; margin-top: 6px;
+      background: var(--pixel-panel);
+      border: 2px solid var(--pixel-border); border-radius: 0;
+      padding: 6px; max-height: 200px; overflow-y: auto;
     }
-    .exif-row { display: flex; padding: 2px 0; border-bottom: 1px solid var(--vscode-widget-border, transparent); }
+    .exif-row { display: flex; padding: 3px 0; border-bottom: 1px solid rgba(136, 136, 153, 0.3); }
     .exif-row:last-child { border-bottom: none; }
-    .exif-key { font-weight: 600; min-width: 90px; color: var(--vscode-descriptionForeground); }
+    .exif-key { min-width: 90px; color: var(--pixel-text-dim); }
     .exif-val { flex: 1; word-break: break-all; }
 
     /* Estimate */
     .estimate-box {
-      background: var(--vscode-input-background);
-      border-radius: 4px; padding: 8px; margin-bottom: 12px;
-      font-size: 11px; text-align: center;
+      background: var(--pixel-panel);
+      border: 2px solid var(--pixel-border); border-radius: 0;
+      padding: 8px; margin-bottom: 10px;
+      font-size: 20px; text-align: center;
+      box-shadow: var(--pixel-shadow);
     }
-    .estimate-box .est-size { font-weight: 700; font-size: 13px; }
-    .estimate-box .est-savings { color: #16a34a; font-weight: 600; }
-    .estimate-box .est-increase { color: var(--vscode-errorForeground); font-weight: 600; }
+    .estimate-box .est-size { font-size: 24px; color: var(--pixel-accent); }
+    .estimate-box .est-savings { color: #228855; }
+    .estimate-box .est-increase { color: #dd2222; }
 
     /* Progress */
-    .progress-section { display: none; margin-bottom: 12px; }
+    .progress-section { display: none; margin-bottom: 10px; }
     .progress-section.active { display: block; }
-    .progress-bar-bg { width: 100%; height: 6px; background: var(--vscode-progressBar-background, #333); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
-    .progress-bar { height: 100%; background: var(--vscode-button-background); border-radius: 3px; transition: width 0.2s; width: 0%; }
-    .progress-text { font-size: 11px; color: var(--vscode-descriptionForeground); }
+    .progress-bar-bg { width: 100%; height: 10px; background: #e0e0ee; border: 2px solid var(--pixel-border); border-radius: 0; overflow: hidden; margin-bottom: 6px; }
+    .progress-bar { height: 100%; background: var(--pixel-green); border-radius: 0; transition: width 0.2s; width: 0%; }
+    .progress-text { font-size: 19px; color: var(--pixel-text-dim); }
 
     /* Results */
-    .results-section { display: none; margin-top: 12px; }
+    .results-section { display: none; margin-top: 10px; }
     .results-section.active { display: block; }
-    .result-item { padding: 6px 8px; margin-bottom: 4px; border-radius: 4px; font-size: 11px; background: var(--vscode-input-background); }
-    .result-item .result-name { font-weight: 600; margin-bottom: 2px; }
-    .result-item .result-detail { color: var(--vscode-descriptionForeground); }
-    .result-item.success .result-savings { color: #16a34a; font-weight: 600; }
-    .result-item.error { border-left: 3px solid var(--vscode-errorForeground); }
-    .result-item.error .result-detail { color: var(--vscode-errorForeground); }
+    .result-item {
+      padding: 6px 8px; margin-bottom: 4px; font-size: 19px;
+      background: var(--pixel-panel); border: 2px solid var(--pixel-border); border-radius: 0;
+    }
+    .result-item .result-name { margin-bottom: 2px; }
+    .result-item .result-detail { color: var(--pixel-text-dim); }
+    .result-item.success .result-savings { color: #228855; }
+    .result-item.error { border-left: 3px solid #dd2222; }
+    .result-item.error .result-detail { color: #dd2222; }
 
-    .summary { padding: 8px; border-radius: 4px; background: var(--vscode-input-background); font-size: 12px; margin-bottom: 8px; text-align: center; }
-    .summary .big-number { font-size: 20px; font-weight: 700; color: #16a34a; }
+    .summary {
+      padding: 8px; background: var(--pixel-panel);
+      border: 2px solid var(--pixel-border); border-radius: 0;
+      font-size: 20px; margin-bottom: 8px; text-align: center;
+      box-shadow: var(--pixel-shadow);
+    }
+    .summary .big-number { font-size: 32px; color: var(--pixel-green); text-shadow: 1px 1px 0px rgba(0,0,0,0.1); }
 
-    .divider { border: none; border-top: 1px solid var(--vscode-widget-border, var(--vscode-sideBarSectionHeader-border, #333)); margin: 12px 0; }
+    .divider { border: none; border-top: 2px solid var(--pixel-border); margin: 10px 0; }
   </style>
 </head>
 <body>
@@ -454,8 +512,8 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
   <div class="section">
     <h2>Select Images</h2>
     <div class="btn-group">
-      <button class="btn-secondary" id="btnSelectFiles">Select Files</button>
-      <button class="btn-secondary" id="btnSelectFolder">Select Folder</button>
+      <button class="btn-secondary" id="btnSelectFiles">&#x25A3; Files</button>
+      <button class="btn-secondary" id="btnSelectFolder">&#x25A8; Folder</button>
     </div>
     <div id="fileCount" class="file-count" style="display:none;"></div>
     <div id="fileList" class="file-list empty">No files selected</div>
@@ -467,6 +525,11 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     <h2>Preview</h2>
     <div class="preview-info" id="previewInfo"></div>
     <div class="preview-container" id="previewContainer">
+      <div class="zoom-controls">
+        <button class="btn-small" id="btnZoomOut" title="Zoom Out">&#x2212;</button>
+        <button class="btn-small" id="btnZoomReset" title="Reset" style="font-size:14px;">100%</button>
+        <button class="btn-small" id="btnZoomIn" title="Zoom In">+</button>
+      </div>
       <div class="preview-loading" id="previewLoading">Select a file to preview</div>
       <img id="previewImage" style="display:none;" />
       <div class="crop-overlay" id="cropOverlay">
@@ -474,10 +537,10 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       </div>
     </div>
     <div class="crop-controls">
-      <button class="btn-secondary btn-small" id="btnRotateLeft" title="Rotate 90° Left">&#x21BA; Left</button>
-      <button class="btn-secondary btn-small" id="btnRotateRight" title="Rotate 90° Right">&#x21BB; Right</button>
-      <button class="btn-secondary btn-small" id="btnCropToggle">Enable Crop</button>
-      <button class="btn-secondary btn-small btn-danger" id="btnCropClear" style="display:none;">Clear Crop</button>
+      <button class="btn-secondary btn-small" id="btnRotateLeft" title="Rotate 90° Left">&#x21BA;</button>
+      <button class="btn-secondary btn-small" id="btnRotateRight" title="Rotate 90° Right">&#x21BB;</button>
+      <button class="btn-secondary btn-small btn-crop" id="btnCropToggle">&#x2702; Crop</button>
+      <button class="btn-secondary btn-small btn-danger" id="btnCropClear" style="display:none;">&#x2716; Clear</button>
     </div>
     <div class="crop-inputs" id="cropInputs">
       <div><label>X</label><input type="number" id="cropX" min="0" value="0"></div>
@@ -520,7 +583,7 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     </div>
   </div>
 
-  <button class="btn-convert" id="btnConvert" disabled>Convert to WebP</button>
+  <button class="btn-convert" id="btnConvert" disabled>&#x25B6; Convert to WebP</button>
 
   <!-- PROGRESS -->
   <div class="progress-section" id="progressSection">
@@ -575,6 +638,9 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     const btnCropClear = document.getElementById('btnCropClear');
     const btnRotateLeft = document.getElementById('btnRotateLeft');
     const btnRotateRight = document.getElementById('btnRotateRight');
+    const btnZoomIn = document.getElementById('btnZoomIn');
+    const btnZoomOut = document.getElementById('btnZoomOut');
+    const btnZoomReset = document.getElementById('btnZoomReset');
     const cropInputs = document.getElementById('cropInputs');
     const cropX = document.getElementById('cropX');
     const cropY = document.getElementById('cropY');
@@ -585,6 +651,43 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     const estimateBox = document.getElementById('estimateBox');
     const estimateText = document.getElementById('estimateText');
     const outputFormat = document.getElementById('outputFormat');
+
+    // Zoom — pixel size để scroll cả ngang + dọc
+    var sidebarZoom = 100;
+    var sidebarBaseW = 0;
+    function initSidebarBase() {
+      if (previewImage && previewImage.naturalWidth) {
+        sidebarBaseW = previewContainer.clientWidth;
+      }
+    }
+    function applySidebarZoom() {
+      if (previewImage.style.display === 'none') return;
+      if (!sidebarBaseW) initSidebarBase();
+      var w = Math.round(sidebarBaseW * sidebarZoom / 100);
+      previewImage.style.width = w + 'px';
+      previewImage.style.height = 'auto';
+      previewImage.style.maxWidth = 'none';
+      previewImage.style.maxHeight = 'none';
+      btnZoomReset.textContent = sidebarZoom + '%';
+    }
+    function resetSidebarZoom() {
+      sidebarZoom = 100;
+      sidebarBaseW = 0;
+      previewImage.style.width = '';
+      previewImage.style.height = '';
+      previewImage.style.maxWidth = '100%';
+      previewImage.style.maxHeight = '100%';
+      btnZoomReset.textContent = '100%';
+    }
+    btnZoomIn.addEventListener('click', function() { sidebarZoom = Math.min(400, sidebarZoom + 25); applySidebarZoom(); });
+    btnZoomOut.addEventListener('click', function() { sidebarZoom = Math.max(25, sidebarZoom - 25); applySidebarZoom(); });
+    btnZoomReset.addEventListener('click', resetSidebarZoom);
+    previewContainer.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      if (e.deltaY < 0) sidebarZoom = Math.min(400, sidebarZoom + 10);
+      else sidebarZoom = Math.max(25, sidebarZoom - 10);
+      applySidebarZoom();
+    }, { passive: false });
 
     let estimateTimer = null;
 
@@ -627,7 +730,7 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     // Crop toggle
     btnCropToggle.addEventListener('click', () => {
       state.cropEnabled = !state.cropEnabled;
-      btnCropToggle.textContent = state.cropEnabled ? 'Disable Crop' : 'Enable Crop';
+      btnCropToggle.textContent = state.cropEnabled ? '\u2716 Crop Off' : '\u2702 Crop';
       cropOverlay.classList.toggle('active', state.cropEnabled);
       cropInputs.classList.toggle('active', state.cropEnabled);
       if (!state.cropEnabled) {
@@ -866,6 +969,7 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       const file = state.files[index];
       if (!file) return;
 
+      resetSidebarZoom();
       previewImage.style.display = 'none';
       previewLoading.style.display = 'block';
       previewLoading.textContent = 'Loading preview...';
@@ -986,13 +1090,13 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       deleteOriginal.disabled = state.converting;
 
       if (state.converting) {
-        btnConvert.textContent = 'Converting...';
+        btnConvert.textContent = '\u25FC Converting...';
       } else {
         var cropLabel = state.cropData ? ' (cropped)' : '';
         var fmtName = outputFormat.options[outputFormat.selectedIndex].text;
         btnConvert.textContent = state.files.length > 0
-          ? 'Convert ' + state.files.length + ' file(s) to ' + fmtName + cropLabel
-          : 'Convert to ' + fmtName;
+          ? '\u25B6 Convert ' + state.files.length + ' file(s) to ' + fmtName + cropLabel
+          : '\u25B6 Convert to ' + fmtName;
       }
     }
 

@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Stylized L -->
-  <path d="M7 4 C7 4, 7 16, 7 16 C7 17, 7.5 17.5, 8.5 17.5 L18 17.5" stroke-width="2.5"/>
-  <!-- Decorative slash -->
-  <line x1="14" y1="20" x2="17.5" y2="13" stroke-width="1.5"/>
+  <!-- "lw" shape: l taller than w, thicker strokes -->
+  <path d="M1.5 1.5 L1.5 15 C1.5 18 3.5 20 6.5 20 C9.5 20 11.5 18 11.5 15 L11.5 7.5" stroke-width="3.2"/>
+  <path d="M11.5 7.5 L11.5 15 C11.5 18 13.5 20 16.5 20 C19.5 20 21.5 18 21.5 15 L21.5 7.5" stroke-width="3.2"/>
 </svg>
