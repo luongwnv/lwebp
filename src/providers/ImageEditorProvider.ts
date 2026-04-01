@@ -415,6 +415,29 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     .convert-controls { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
     .control-group { display: flex; flex-direction: column; gap: 4px; }
     .control-group label { font-size: 20px; }
+    .control-group.format-control { position: relative; }
+    .format-select-btn {
+      padding: 6px 10px; font-size: 20px; font-family: 'FS Pixel Sans', monospace;
+      background: #f5dcc0; color: var(--pixel-text);
+      border: 2px solid var(--pixel-border); border-radius: 0; box-shadow: var(--pixel-shadow);
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer;
+    }
+    .format-select-btn:hover { background: #efc0a0; }
+    .format-dropdown-menu {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+      display: none; background: #f5dcc0; border: 2px solid var(--pixel-border);
+      border-top: none; box-shadow: var(--pixel-shadow);
+    }
+    .format-dropdown-menu.active { display: block; }
+    .format-dropdown-item {
+      padding: 4px 10px; font-size: 22px; font-family: 'FS Pixel Sans', monospace;
+      cursor: pointer; border-bottom: 1px solid rgba(0,0,0,0.1);
+      color: var(--pixel-text);
+    }
+    .format-dropdown-item:last-child { border-bottom: none; }
+    .format-dropdown-item:hover { background: #f0b090; }
+    .format-dropdown-item.active { background: #dd6600; color: #fff; }
     .control-group select {
       padding: 6px 10px; font-size: 20px; font-family: 'FS Pixel Sans', monospace;
       background: #f5dcc0; color: var(--pixel-text);
@@ -422,7 +445,16 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     }
     .quality-row { display: flex; align-items: center; gap: 8px; }
     .quality-row input[type="range"] { width: 140px; height: 14px; accent-color: var(--pixel-accent); font-size: 20px; }
-    .quality-val { font-size: 26px; min-width: 36px; color: var(--pixel-accent); }
+    .quality-val {
+      display: flex; align-items: center; min-width: 60px;
+    }
+    .quality-val input[type="number"] {
+      width: 50px; padding: 2px 4px; font-size: 24px; font-family: 'FS Pixel Sans', monospace;
+      background: #f5dcc0; color: var(--pixel-accent); border: 1px solid var(--pixel-border);
+      text-align: right; -moz-appearance: textfield;
+    }
+    .quality-val input[type="number"]::-webkit-outer-spin-button,
+    .quality-val input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .estimate { font-size: 20px; color: var(--pixel-text-dim); margin-top: 10px; }
     .est-savings { color: #228855; }
     .est-increase { color: #dd2222; }
@@ -518,19 +550,26 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     <div class="convert-section">
       <h2>Convert</h2>
       <div class="convert-controls">
-        <div class="control-group">
-          <label for="format">Format</label>
-          <select id="format">
-            <option value="webp" selected>WebP</option>
-            <option value="jpg">JPEG</option>
-            <option value="png">PNG</option>
-          </select>
+        <div class="control-group format-control">
+          <label>Format</label>
+          <button class="format-select-btn" id="formatSelectBtn" type="button">
+            <span id="formatLabel">WebP</span>
+            <span style="font-size: 18px;">&#x25BC;</span>
+          </button>
+          <div class="format-dropdown-menu" id="formatDropdown">
+            <div class="format-dropdown-item active" data-value="webp">WebP</div>
+            <div class="format-dropdown-item" data-value="jpg">JPEG</div>
+            <div class="format-dropdown-item" data-value="png">PNG</div>
+          </div>
+          <input type="hidden" id="format" value="webp">
         </div>
         <div class="control-group">
           <label>Quality</label>
           <div class="quality-row">
             <input type="range" id="quality" min="0" max="100" value="80">
-            <span class="quality-val" id="qualityVal">80</span>
+            <div class="quality-val">
+              <input type="number" id="qualityVal" min="0" max="100" value="80">
+            </div>
           </div>
         </div>
         <button class="convert-btn" id="convertBtn">&#x25B6; Convert</button>
@@ -555,6 +594,10 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     const qualitySlider = document.getElementById('quality');
     const qualityVal = document.getElementById('qualityVal');
     const formatSelect = document.getElementById('format');
+    const formatSelectBtn = document.getElementById('formatSelectBtn');
+    const formatDropdown = document.getElementById('formatDropdown');
+    const formatLabel = document.getElementById('formatLabel');
+    const formatDropdownItems = document.querySelectorAll('.format-dropdown-item');
     const convertBtn = document.getElementById('convertBtn');
     const estimate = document.getElementById('estimate');
     const resultArea = document.getElementById('resultArea');
@@ -571,6 +614,31 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     const btnCarouselPrev = document.getElementById('btnCarouselPrev');
     const btnCarouselNext = document.getElementById('btnCarouselNext');
     const carouselCounter = document.getElementById('carouselCounter');
+
+    // Custom dropdown handler
+    formatSelectBtn.addEventListener('click', function() {
+      formatDropdown.classList.toggle('active');
+    });
+
+    formatDropdownItems.forEach(function(item) {
+      item.addEventListener('click', function() {
+        const value = this.dataset.value;
+        formatSelect.value = value;
+        formatLabel.textContent = this.textContent;
+        formatDropdown.classList.remove('active');
+        formatDropdownItems.forEach(function(i) { i.classList.remove('active'); });
+        this.classList.add('active');
+        // Trigger change event for listeners
+        formatSelect.dispatchEvent(new Event('change'));
+      });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!formatSelectBtn.contains(e.target) && !formatDropdown.contains(e.target)) {
+        formatDropdown.classList.remove('active');
+      }
+    });
 
     var imageInfo = { width: ${info.width}, height: ${info.height}, size: ${info.size}, format: '${info.format}' };
     var cropEnabled = false;
@@ -821,7 +889,18 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     });
 
     // Quality & Format
-    qualitySlider.addEventListener('input', function() { qualityVal.textContent = qualitySlider.value; requestEstimate(); });
+    qualitySlider.addEventListener('input', function() {
+      const val = Math.max(0, Math.min(100, parseInt(qualitySlider.value) || 80));
+      qualitySlider.value = val;
+      qualityVal.value = val;
+      requestEstimate();
+    });
+    qualityVal.addEventListener('change', function() {
+      const val = Math.max(0, Math.min(100, parseInt(qualityVal.value) || 80));
+      qualitySlider.value = val;
+      qualityVal.value = val;
+      requestEstimate();
+    });
     formatSelect.addEventListener('change', function() { requestEstimate(); });
 
     // Convert

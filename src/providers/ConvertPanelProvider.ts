@@ -389,19 +389,45 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
 
     .quality-control { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .quality-control input[type="range"] { flex: 1; height: 14px; accent-color: var(--pixel-accent); }
-    .quality-value { font-size: 26px; min-width: 36px; text-align: right; color: var(--pixel-accent); }
+    .quality-value { display: flex; align-items: center; }
+    .quality-value input[type="number"] {
+      width: 50px; padding: 2px 4px; font-size: 24px; font-family: 'FS Pixel Sans', monospace;
+      background: var(--pixel-panel); color: var(--pixel-accent); border: 1px solid var(--pixel-border);
+      text-align: right; -moz-appearance: textfield;
+    }
+    .quality-value input[type="number"]::-webkit-outer-spin-button,
+    .quality-value input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
     .checkbox-control { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 20px; }
     .checkbox-control input[type="checkbox"] { accent-color: var(--pixel-accent); width: 16px; height: 16px; }
 
-    .format-control { margin-bottom: 10px; }
-    .format-control select {
+    .format-control { margin-bottom: 10px; position: relative; }
+    .format-select {
       width: 100%; padding: 6px 8px; font-size: 22px;
       font-family: 'FS Pixel Sans', monospace;
       background: var(--pixel-panel); color: var(--pixel-text);
       border: 2px solid var(--pixel-border); border-radius: 0;
       cursor: pointer; box-shadow: var(--pixel-shadow);
+      display: flex; align-items: center; justify-content: space-between;
     }
+    .format-select-label { flex: 1; }
+    .format-select.open .dropdown-icon { transform: rotate(180deg); }
+    .dropdown-icon { transition: transform 0.2s; }
+    .format-dropdown {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+      display: none; background: var(--pixel-panel);
+      border: 2px solid var(--pixel-border); border-top: none;
+      box-shadow: var(--pixel-shadow);
+    }
+    .format-dropdown.active { display: block; }
+    .format-option {
+      padding: 4px 8px; font-size: 22px; cursor: pointer;
+      border-bottom: 1px solid rgba(136, 136, 153, 0.2);
+      font-family: 'FS Pixel Sans', monospace; color: var(--pixel-text);
+    }
+    .format-option:last-child { border-bottom: none; }
+    .format-option:hover { background: var(--pixel-btn-hover); }
+    .format-option.selected { background: var(--pixel-active-bg); color: var(--pixel-accent); }
 
     /* Preview section */
     .preview-section { display: none; margin-bottom: 14px; }
@@ -581,18 +607,25 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
   <!-- SETTINGS -->
   <div class="section">
     <h2>Settings</h2>
-    <label for="outputFormat">Output Format</label>
+    <label>Output Format</label>
     <div class="format-control">
-      <select id="outputFormat">
-        <option value="webp" selected>WebP</option>
-        <option value="jpg">JPEG</option>
-        <option value="png">PNG</option>
-      </select>
+      <div class="format-select" id="formatSelect">
+        <span class="format-select-label" id="formatLabel">WebP</span>
+        <span class="dropdown-icon">▼</span>
+      </div>
+      <div class="format-dropdown" id="formatDropdown">
+        <div class="format-option" data-value="webp" data-label="WebP">WebP</div>
+        <div class="format-option" data-value="jpg" data-label="JPEG">JPEG</div>
+        <div class="format-option" data-value="png" data-label="PNG">PNG</div>
+      </div>
+      <input type="hidden" id="outputFormat" value="webp">
     </div>
     <label for="quality">Quality</label>
     <div class="quality-control">
       <input type="range" id="quality" min="0" max="100" value="80">
-      <span class="quality-value" id="qualityValue">80</span>
+      <div class="quality-value">
+        <input type="number" id="qualityValue" min="0" max="100" value="80">
+      </div>
     </div>
     <div class="estimate-box" id="estimateBox" style="display:none;">
       <span id="estimateText"></span>
@@ -675,6 +708,42 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     const estimateBox = document.getElementById('estimateBox');
     const estimateText = document.getElementById('estimateText');
     const outputFormat = document.getElementById('outputFormat');
+    const formatSelect = document.getElementById('formatSelect');
+    const formatDropdown = document.getElementById('formatDropdown');
+    const formatLabel = document.getElementById('formatLabel');
+    const formatOptions = document.querySelectorAll('.format-option');
+
+    // Custom dropdown handler
+    formatSelect.addEventListener('click', function() {
+      formatDropdown.classList.toggle('active');
+    });
+
+    formatOptions.forEach(function(option) {
+      option.addEventListener('click', function() {
+        const value = this.dataset.value;
+        const label = this.dataset.label;
+        outputFormat.value = value;
+        formatLabel.textContent = label;
+        formatDropdown.classList.remove('active');
+        formatOptions.forEach(function(opt) { opt.classList.remove('selected'); });
+        this.classList.add('selected');
+        updateUI(); // Trigger re-render
+      });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!formatSelect.contains(e.target) && !formatDropdown.contains(e.target)) {
+        formatDropdown.classList.remove('active');
+      }
+    });
+
+    // Initialize selected format option
+    formatOptions.forEach(function(option) {
+      if (option.dataset.value === outputFormat.value) {
+        option.classList.add('selected');
+      }
+    });
 
     // Zoom — pixel size để scroll cả ngang + dọc
     var sidebarZoom = 100;
@@ -734,9 +803,17 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       requestEstimate();
     });
 
-    // Quality slider
+    // Quality slider and input
     qualitySlider.addEventListener('input', () => {
-      qualityValue.textContent = qualitySlider.value;
+      const val = Math.max(0, Math.min(100, parseInt(qualitySlider.value) || 80));
+      qualitySlider.value = val;
+      qualityValue.value = val;
+      requestEstimate();
+    });
+    qualityValue.addEventListener('change', () => {
+      const val = Math.max(0, Math.min(100, parseInt(qualityValue.value) || 80));
+      qualitySlider.value = val;
+      qualityValue.value = val;
       requestEstimate();
     });
 
@@ -910,7 +987,7 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       switch (msg.type) {
         case 'config':
           qualitySlider.value = msg.quality;
-          qualityValue.textContent = msg.quality;
+          qualityValue.value = msg.quality;
           deleteOriginal.checked = msg.deleteOriginal;
           break;
 

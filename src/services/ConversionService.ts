@@ -7,8 +7,19 @@ const HEIF_EXTENSIONS = ['.heic', '.heif'];
 
 export type OutputFormat = 'webp' | 'jpg' | 'png';
 
+// Cache converted HEIC buffers to avoid re-converting for multiple operations
+const heicCache = new Map<string, { buffer: Buffer; mtime: number }>();
+const heicThumbCache = new Map<string, { buffer: Buffer; mtime: number }>();
+
 function isHeif(filePath: string): boolean {
   return HEIF_EXTENSIONS.includes(path.extname(filePath).toLowerCase());
+}
+
+/** Convert HEIC for metadata operations (lower quality to be faster) */
+async function convertHeicToBuffer(fileBuffer: Buffer, quality = 0.8): Promise<Buffer> {
+  const convert = (await import('heic-convert')).default;
+  const result = await convert({ buffer: fileBuffer, format: 'JPEG', quality });
+  return Buffer.from(result);
 }
 
 async function readImageInput(filePath: string): Promise<Buffer> {
@@ -16,16 +27,39 @@ async function readImageInput(filePath: string): Promise<Buffer> {
   if (!isHeif(filePath)) {
     return fileBuffer;
   }
-  // Try sharp first (works on macOS with native HEIF support), fall back to heic-convert
+  
+  // Check cache validity
+  const stat = await fs.stat(filePath);
+  const cached = heicCache.get(filePath);
+  if (cached && cached.mtime === stat.mtime.getTime()) {
+    return cached.buffer;
+  }
+  
+  // Convert HEIC to JPEG with high quality for actual conversion
+  const convertedBuffer = await convertHeicToBuffer(fileBuffer, 1);
+  heicCache.set(filePath, { buffer: convertedBuffer, mtime: stat.mtime.getTime() });
+  return convertedBuffer;
+}
+
+/** Try reading HEIC metadata without full pixel conversion */
+async function tryReadHeicMetadataOnly(filePath: string): Promise<Buffer | null> {
   try {
+    const fileBuffer = await fs.readFile(filePath);
+    // Sharp sometimes can extract metadata headers without full decode
     const sharp = (await import('sharp')).default;
-    // Test actual decode, not just metadata — some platforms read headers but fail on pixel data
-    await sharp(fileBuffer).raw().toBuffer();
-    return fileBuffer;
+    await sharp(fileBuffer).metadata();
+    // If metadata read succeeded, convert with lower quality (we only need dimensions)
+    const stat = await fs.stat(filePath);
+    const stat_mtime = stat.mtime.getTime();
+    const cached = heicCache.get(filePath);
+    if (cached && cached.mtime === stat_mtime) {
+      return cached.buffer;
+    }
+    const converted = await convertHeicToBuffer(fileBuffer, 0.6);
+    heicCache.set(filePath, { buffer: converted, mtime: stat_mtime });
+    return converted;
   } catch {
-    const convert = (await import('heic-convert')).default;
-    const result = await convert({ buffer: fileBuffer, format: 'JPEG', quality: 1 });
-    return Buffer.from(result);
+    return null;
   }
 }
 
@@ -113,7 +147,14 @@ export class ConversionService {
 
   async getImageInfo(filePath: string): Promise<ImageInfo> {
     const sharp = (await import('sharp')).default;
-    const input = await readImageInput(filePath);
+    // For HEIC, try metadata-only path first (faster, lower quality needed)
+    let input: Buffer;
+    if (isHeif(filePath)) {
+      const metadataOnly = await tryReadHeicMetadataOnly(filePath);
+      input = metadataOnly || (await readImageInput(filePath));
+    } else {
+      input = await readImageInput(filePath);
+    }
     const metadata = await sharp(input).metadata();
     const stat = await fs.stat(filePath);
 
@@ -133,8 +174,15 @@ export class ConversionService {
     try {
       metadata = await sharp(rawBuffer).metadata();
     } catch {
-      // If sharp can't read metadata from original (e.g. HEIC on Windows), try converted
-      const input = await readImageInput(filePath);
+      // If sharp can't read metadata from original (e.g. HEIC on Windows)
+      // Try metadata-only conversion for HEIC first (faster)
+      let input: Buffer;
+      if (isHeif(filePath)) {
+        const metadataOnly = await tryReadHeicMetadataOnly(filePath);
+        input = metadataOnly || (await readImageInput(filePath));
+      } else {
+        input = await readImageInput(filePath);
+      }
       metadata = await sharp(input).metadata();
     }
     const exif = metadata.exif ? this._parseExifBuffer(metadata.exif) : {};
@@ -188,12 +236,24 @@ export class ConversionService {
 
   async getImageBase64(filePath: string, maxWidth = 400): Promise<string> {
     const sharp = (await import('sharp')).default;
-    const input = await readImageInput(filePath);
+    // Check thumbnail cache first
+    const stat = await fs.stat(filePath);
+    const stat_mtime = stat.mtime?.getTime?.() ?? 0;
+    const cachedThumb = heicThumbCache.get(filePath);
+    if (stat_mtime > 0 && cachedThumb && cachedThumb.mtime === stat_mtime) {
+      return `data:image/png;base64,${cachedThumb.buffer.toString('base64')}`;
+    }
+    
+    // For HEIC, use lower quality intermediate buffer (metadata-only path)
+    const input = isHeif(filePath) 
+      ? (await tryReadHeicMetadataOnly(filePath)) || (await readImageInput(filePath))
+      : await readImageInput(filePath);
     const buffer = await sharp(input)
       .rotate() // auto-rotate based on EXIF orientation
       .resize({ width: maxWidth, withoutEnlargement: true })
-      .png()
+      .png({ compressionLevel: 6 }) // Compress thumbnail
       .toBuffer();
+    heicThumbCache.set(filePath, { buffer, mtime: stat_mtime });
     return `data:image/png;base64,${buffer.toString('base64')}`;
   }
 

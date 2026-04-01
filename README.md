@@ -2,7 +2,7 @@
 
 Convert images to **WebP**, **JPEG**, or **PNG** directly from VS Code with pixel-art styled UI, sidebar panel, and custom image editor.
 
-<img src="https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/sidebar-panel.png" width="350" />
+<img src="https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/sidebar-panel.webp" width="350" />
 
 ## Features
 
@@ -21,7 +21,7 @@ Convert images to **WebP**, **JPEG**, or **PNG** directly from VS Code with pixe
 
 Open any image with **"Reopen Editor With..." > lwebp Image Editor** to get a full editing UI.
 
-<img src="https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/image-editor.png" width="600" />
+<img src="https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/image-editor.webp" width="600" />
 
 - **Rotate** left/right with continuous rotation support
 - **Zoom** in/out with buttons or scroll wheel (25%-400%)
@@ -33,6 +33,8 @@ Open any image with **"Reopen Editor With..." > lwebp Image Editor** to get a fu
 ### Context Menu
 
 Right-click any image in Explorer or editor tab:
+
+<img src="https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/context-menu.webp" width="350" />
 
 - **Convert to WebP** — instant conversion
 - **Convert to WebP (Select Quality...)** — choose quality first
