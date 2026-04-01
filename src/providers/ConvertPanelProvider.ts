@@ -728,6 +728,7 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
         formatOptions.forEach(function(opt) { opt.classList.remove('selected'); });
         this.classList.add('selected');
         updateUI(); // Trigger re-render
+        requestEstimate(); // Update estimated size
       });
     });
 
@@ -1050,7 +1051,7 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
             var savingsClass = saved > 0 ? 'est-savings' : 'est-increase';
             var savingsLabel = saved > 0 ? saved + '% smaller' : Math.abs(saved) + '% larger';
             estimateBox.style.display = '';
-            var fmtLabel = outputFormat.options[outputFormat.selectedIndex].text;
+            var fmtLabel = formatLabel ? formatLabel.textContent : 'WebP';
             estimateText.innerHTML =
               'Estimated ' + fmtLabel + ': <span class="est-size">' + formatSize(estSize) + '</span>' +
               ' (<span class="' + savingsClass + '">' + savingsLabel + '</span>)';
@@ -1239,7 +1240,7 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
         btnConvert.textContent = '\u25FC Converting...';
       } else {
         var cropLabel = state.cropData ? ' (cropped)' : '';
-        var fmtName = outputFormat.options[outputFormat.selectedIndex].text;
+        var fmtName = formatLabel ? formatLabel.textContent : 'WebP';
         var count = filesToConvert.length;
         btnConvert.textContent = count > 0
           ? '\u25B6 Convert ' + count + ' file(s) to ' + fmtName + cropLabel
