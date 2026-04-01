@@ -3,7 +3,7 @@ import * as path from 'path';
 import { ConversionService, CropOptions, OutputFormat } from '../services/ConversionService';
 
 interface WebviewMessage {
-  type: 'selectFiles' | 'selectFolder' | 'convert' | 'getConfig' | 'previewFile' | 'getFileInfo' | 'getExif' | 'estimateSize' | 'rotateImage';
+  type: 'selectFiles' | 'selectFolder' | 'convert' | 'getConfig' | 'previewFile' | 'getFileInfo' | 'getExif' | 'estimateSize' | 'rotateImage' | 'themeChanged';
   quality?: number;
   deleteOriginal?: boolean;
   files?: string[];
@@ -12,6 +12,7 @@ interface WebviewMessage {
   crop?: CropOptions;
   format?: OutputFormat;
   angle?: number;
+  theme?: string;
 }
 
 export class ConvertPanelProvider implements vscode.WebviewViewProvider {
@@ -19,9 +20,14 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
 
   private _view?: vscode.WebviewView;
   private _service: ConversionService;
+  private _onThemeChanged?: (theme: string) => void;
 
   constructor(private readonly _extensionUri: vscode.Uri) {
     this._service = ConversionService.getInstance();
+  }
+
+  onThemeChanged(callback: (theme: string) => void): void {
+    this._onThemeChanged = callback;
   }
 
   resolveWebviewView(
@@ -55,7 +61,7 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
             canSelectMany: true,
             canSelectFolders: false,
             filters: {
-              'Images': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'tif', 'avif', 'heic', 'heif'],
+              'Images': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'tif', 'avif', 'heic', 'heif', 'webp', 'svg', 'ico', 'jxl', 'raw', 'cr2', 'nef', 'arw'],
             },
           });
           if (uris && uris.length > 0) {
@@ -174,6 +180,13 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
             });
           } catch {
             this._postMessage({ type: 'error', message: 'Failed to rotate image.' });
+          }
+          break;
+        }
+
+        case 'themeChanged': {
+          if (message.theme && this._onThemeChanged) {
+            this._onThemeChanged(message.theme);
           }
           break;
         }
@@ -300,6 +313,47 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
       --pixel-active-bg: rgba(204, 102, 0, 0.15);
       --pixel-shadow: 2px 2px 0px #aaaabb;
     }
+    [data-theme="dark"] {
+      --pixel-bg: #1a1a2e;
+      --pixel-panel: #25253d;
+      --pixel-border: #555577;
+      --pixel-border-light: #7777bb;
+      --pixel-accent: #ffaa44;
+      --pixel-green: #ff7744;
+      --pixel-text: #e8e8f8;
+      --pixel-text-dim: #9999bb;
+      --pixel-btn-bg: #2e2e4a;
+      --pixel-btn-hover: #3a3a5e;
+      --pixel-active-bg: rgba(255, 170, 68, 0.2);
+      --pixel-shadow: 2px 2px 0px #0a0a18;
+    }
+    [data-theme="dark"] .btn-secondary { background: #2e2e4a; color: #ddddff; border-color: #5555aa; }
+    [data-theme="dark"] .btn-secondary:hover { background: #3a3a5e; border-color: #7777bb; }
+    [data-theme="dark"] .btn-convert { background: #ee7700; color: #ffffff; border-color: #cc5500; }
+    [data-theme="dark"] .btn-convert:hover { background: #dd6600; }
+    [data-theme="dark"] .btn-crop { background: #3a2a1a; color: #ffcc77; border-color: #886633; }
+    [data-theme="dark"] .btn-crop:hover { background: #4a3a2a; }
+    [data-theme="dark"] .btn-danger { background: #dd3333; border-color: #aa1111; color: #ffffff; }
+    [data-theme="dark"] .btn-danger:hover { background: #cc2222; }
+    [data-theme="dark"] .preview-container { background: #12122a; }
+    [data-theme="dark"] .zoom-controls button { background: rgba(30,30,60,0.95); color: #ddddff; border-color: #555577; }
+    [data-theme="dark"] .zoom-controls button:hover { background: #3a3a5e; }
+    [data-theme="dark"] .file-item .remove:hover { color: #ff5555; }
+    [data-theme="dark"] .file-item.checked .check { color: #ffffff; }
+    [data-theme="dark"] .estimate-box .est-savings { color: #55cc88; }
+    [data-theme="dark"] .estimate-box .est-increase { color: #ff5555; }
+    [data-theme="dark"] .progress-bar-bg { background: #1a1a33; }
+    [data-theme="dark"] .result-item.success .result-savings { color: #55cc88; }
+    [data-theme="dark"] .result-item.error { border-left-color: #ff4444; }
+    [data-theme="dark"] .result-item.error .result-detail { color: #ff6666; }
+    [data-theme="dark"] .exif-toggle { color: var(--pixel-accent); }
+    [data-theme="dark"] .crop-inputs input { background: var(--pixel-panel); color: var(--pixel-text); border-color: var(--pixel-border); }
+    [data-theme="dark"] .quality-value input[type="number"] { background: var(--pixel-panel); color: var(--pixel-accent); border-color: var(--pixel-border); }
+    [data-theme="dark"] .format-option { color: var(--pixel-text); }
+    [data-theme="dark"] .format-option:hover { background: var(--pixel-btn-hover); }
+    [data-theme="dark"] .format-option.selected { color: var(--pixel-accent); }
+    [data-theme="dark"] .summary .big-number { color: var(--pixel-green); }
+    [data-theme="dark"] h2 { color: var(--pixel-accent); }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'FS Pixel Sans', monospace;
@@ -545,6 +599,17 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     .summary .big-number { font-size: 32px; color: var(--pixel-green); text-shadow: 1px 1px 0px rgba(0,0,0,0.1); }
 
     .divider { border: none; border-top: 2px solid var(--pixel-border); margin: 10px 0; }
+
+    .theme-toggle {
+      position: fixed; bottom: 10px; right: 10px; z-index: 999;
+      width: 32px; height: 32px; padding: 0;
+      border: 2px solid var(--pixel-border); border-radius: 0;
+      background: var(--pixel-btn-bg); color: var(--pixel-text);
+      font-size: 18px; cursor: pointer;
+      box-shadow: var(--pixel-shadow);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .theme-toggle:hover { background: var(--pixel-btn-hover); border-color: var(--pixel-border-light); }
   </style>
 </head>
 <body>
@@ -652,6 +717,8 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     <div id="summary" class="summary"></div>
     <div id="resultsList"></div>
   </div>
+
+  <button class="theme-toggle" id="btnThemeToggle" title="Toggle Theme">&#x263E;</button>
 
   <script>
     const vscode = acquireVsCodeApi();
@@ -786,6 +853,47 @@ export class ConvertPanelProvider implements vscode.WebviewViewProvider {
     let estimateTimer = null;
 
     vscode.postMessage({ type: 'getConfig' });
+
+    // Theme toggle: light → dark → auto → light
+    const btnThemeToggle = document.getElementById('btnThemeToggle');
+    const savedState = vscode.getState();
+    var currentTheme = (savedState && savedState.theme) || 'auto';
+    applyTheme(currentTheme);
+
+    btnThemeToggle.addEventListener('click', function() {
+      if (currentTheme === 'light') currentTheme = 'dark';
+      else if (currentTheme === 'dark') currentTheme = 'auto';
+      else currentTheme = 'light';
+      applyTheme(currentTheme);
+      var st = vscode.getState() || {};
+      st.theme = currentTheme;
+      vscode.setState(st);
+      vscode.postMessage({ type: 'themeChanged', theme: currentTheme });
+    });
+
+    function getVscodeTheme() {
+      return document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast') ? 'dark' : 'light';
+    }
+
+    function applyTheme(theme) {
+      var resolved = theme === 'auto' ? getVscodeTheme() : theme;
+      document.documentElement.setAttribute('data-theme', resolved);
+      if (theme === 'auto') {
+        btnThemeToggle.innerHTML = '&#x25D1;';
+        btnThemeToggle.title = 'Theme: Auto (following VS Code)';
+      } else if (theme === 'dark') {
+        btnThemeToggle.innerHTML = '&#x2600;';
+        btnThemeToggle.title = 'Theme: Dark — click for Auto';
+      } else {
+        btnThemeToggle.innerHTML = '&#x263E;';
+        btnThemeToggle.title = 'Theme: Light — click for Dark';
+      }
+    }
+
+    // Watch VS Code theme changes when in auto mode
+    new MutationObserver(function() {
+      if (currentTheme === 'auto') applyTheme('auto');
+    }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
     // Select All / Deselect All
     btnSelectAll.addEventListener('click', function() {

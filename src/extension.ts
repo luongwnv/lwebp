@@ -20,6 +20,9 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
+  // Sync theme from panel to all editor panels
+  panelProvider.onThemeChanged((theme) => editorProvider.setTheme(theme));
+
   // Convert single or multiple selected files
   const convertFile = vscode.commands.registerCommand(
     'lwebp.convertFile',

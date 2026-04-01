@@ -1,9 +1,16 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-export const SUPPORTED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.tif', '.avif', '.heic', '.heif'];
+export const SUPPORTED_EXTENSIONS = [
+  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.tif',
+  '.avif', '.heic', '.heif', '.webp', '.svg',
+  '.ico', '.jxl',
+  '.raw', '.cr2', '.nef', '.arw',
+];
 
 const HEIF_EXTENSIONS = ['.heic', '.heif'];
+const RAW_EXTENSIONS = ['.raw', '.cr2', '.nef', '.arw'];
+const ICO_EXTENSION = '.ico';
 
 export type OutputFormat = 'webp' | 'jpg' | 'png';
 
@@ -15,6 +22,37 @@ function isHeif(filePath: string): boolean {
   return HEIF_EXTENSIONS.includes(path.extname(filePath).toLowerCase());
 }
 
+function isRaw(filePath: string): boolean {
+  return RAW_EXTENSIONS.includes(path.extname(filePath).toLowerCase());
+}
+
+function isIco(filePath: string): boolean {
+  return path.extname(filePath).toLowerCase() === ICO_EXTENSION;
+}
+
+/** Decode ICO: pick largest image, return PNG buffer */
+async function decodeIcoToBuffer(fileBuffer: Buffer): Promise<Buffer> {
+  const { parseICO } = await import('icojs');
+  const images = await parseICO(fileBuffer);
+  if (!images || images.length === 0) {
+    throw new Error('No images found in ICO file');
+  }
+  // Pick the largest image
+  const largest = images.reduce((a, b) => (a.width * a.height >= b.width * b.height ? a : b));
+  return Buffer.from(largest.buffer);
+}
+
+/** Decode camera RAW to TIFF buffer via dcraw */
+async function decodeRawToBuffer(fileBuffer: Buffer): Promise<Buffer> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const dcraw = require('dcraw') as (buf: Buffer, opts?: { exportAsTiff?: boolean }) => Buffer;
+  const tiffBuffer = dcraw(fileBuffer, { exportAsTiff: true });
+  if (!tiffBuffer || tiffBuffer.length === 0) {
+    throw new Error('Failed to decode RAW image');
+  }
+  return Buffer.from(tiffBuffer);
+}
+
 /** Convert HEIC for metadata operations (lower quality to be faster) */
 async function convertHeicToBuffer(fileBuffer: Buffer, quality = 0.8): Promise<Buffer> {
   const convert = (await import('heic-convert')).default;
@@ -24,17 +62,26 @@ async function convertHeicToBuffer(fileBuffer: Buffer, quality = 0.8): Promise<B
 
 async function readImageInput(filePath: string): Promise<Buffer> {
   const fileBuffer = await fs.readFile(filePath);
+
+  if (isIco(filePath)) {
+    return decodeIcoToBuffer(fileBuffer);
+  }
+
+  if (isRaw(filePath)) {
+    return decodeRawToBuffer(fileBuffer);
+  }
+
   if (!isHeif(filePath)) {
     return fileBuffer;
   }
-  
+
   // Check cache validity
   const stat = await fs.stat(filePath);
   const cached = heicCache.get(filePath);
   if (cached && cached.mtime === stat.mtime.getTime()) {
     return cached.buffer;
   }
-  
+
   // Convert HEIC to JPEG with high quality for actual conversion
   const convertedBuffer = await convertHeicToBuffer(fileBuffer, 1);
   heicCache.set(filePath, { buffer: convertedBuffer, mtime: stat.mtime.getTime() });

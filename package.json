@@ -2,7 +2,7 @@
   "name": "lwebp",
   "displayName": "lwebp - Image Converter",
   "description": "Convert images (PNG, JPG, GIF, BMP, TIFF, AVIF, HEIC) to WebP, JPEG, or PNG with preview, crop, EXIF viewer, and quality control.",
-  "version": "1.1.5",
+  "version": "1.1.7",
   "publisher": "luongwnv",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -87,36 +87,36 @@
       "editor/title": [
         {
           "command": "lwebp.convertFile",
-          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif)$/i",
+          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif|webp|svg|ico|jxl|raw|cr2|nef|arw)$/i",
           "group": "navigation"
         },
         {
           "command": "lwebp.convertFileWithQuality",
-          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif)$/i",
+          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif|webp|svg|ico|jxl|raw|cr2|nef|arw)$/i",
           "group": "navigation"
         }
       ],
       "editor/title/context": [
         {
           "command": "lwebp.convertFile",
-          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif)$/i",
+          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif|webp|svg|ico|jxl|raw|cr2|nef|arw)$/i",
           "group": "7_modification@1"
         },
         {
           "command": "lwebp.convertFileWithQuality",
-          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif)$/i",
+          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif|webp|svg|ico|jxl|raw|cr2|nef|arw)$/i",
           "group": "7_modification@2"
         }
       ],
       "explorer/context": [
         {
           "command": "lwebp.convertFile",
-          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif)$/i",
+          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif|webp|svg|ico|jxl|raw|cr2|nef|arw)$/i",
           "group": "7_modification@1"
         },
         {
           "command": "lwebp.convertFileWithQuality",
-          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif)$/i",
+          "when": "resourceExtname =~ /\\.(png|jpg|jpeg|gif|bmp|tiff|tif|avif|heic|heif|webp|svg|ico|jxl|raw|cr2|nef|arw)$/i",
           "group": "7_modification@2"
         },
         {
@@ -160,6 +160,30 @@
           },
           {
             "filenamePattern": "*.heif"
+          },
+          {
+            "filenamePattern": "*.webp"
+          },
+          {
+            "filenamePattern": "*.svg"
+          },
+          {
+            "filenamePattern": "*.ico"
+          },
+          {
+            "filenamePattern": "*.jxl"
+          },
+          {
+            "filenamePattern": "*.raw"
+          },
+          {
+            "filenamePattern": "*.cr2"
+          },
+          {
+            "filenamePattern": "*.nef"
+          },
+          {
+            "filenamePattern": "*.arw"
           }
         ],
         "priority": "option"
@@ -206,8 +230,10 @@
     "restore:sharp": "npm run clean:sharp && npm install"
   },
   "dependencies": {
+    "dcraw": "^1.0.3",
     "exif-reader": "^2.0.1",
     "heic-convert": "^2.1.0",
+    "icojs": "^0.20.1",
     "sharp": "^0.33.5"
   },
   "devDependencies": {

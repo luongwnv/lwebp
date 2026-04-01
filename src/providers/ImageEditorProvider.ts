@@ -6,9 +6,16 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
   public static readonly viewType = 'lwebp.imageEditor';
 
   private _service: ConversionService;
+  private _panels: Set<vscode.WebviewPanel> = new Set();
 
   constructor(private readonly _extensionUri: vscode.Uri) {
     this._service = ConversionService.getInstance();
+  }
+
+  setTheme(theme: string): void {
+    for (const panel of this._panels) {
+      panel.webview.postMessage({ type: 'setTheme', theme });
+    }
   }
 
   async openCustomDocument(
@@ -28,6 +35,9 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
     };
+
+    this._panels.add(webviewPanel);
+    webviewPanel.onDidDispose(() => this._panels.delete(webviewPanel));
 
     const filePath = document.uri.fsPath;
     const fileName = path.basename(filePath);
@@ -316,8 +326,50 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
       --pixel-bg: #f0f0f0; --pixel-panel: #ffffff; --pixel-border: #888899;
       --pixel-border-light: #bb7733; --pixel-accent: #cc6600; --pixel-green: #cc4400;
       --pixel-text: #1a1a2e; --pixel-text-dim: #666688;
-      --pixel-btn-bg: #f0e4d8; --pixel-shadow: 2px 2px 0px #aaaabb;
+      --pixel-btn-bg: #f0e4d8; --pixel-btn-hover: #d0d0e0;
+      --pixel-shadow: 2px 2px 0px #aaaabb;
     }
+    [data-theme="dark"] {
+      --pixel-bg: #1a1a2e; --pixel-panel: #25253d; --pixel-border: #555577;
+      --pixel-border-light: #9977cc; --pixel-accent: #ffaa44; --pixel-green: #ff7744;
+      --pixel-text: #e8e8f8; --pixel-text-dim: #9999bb;
+      --pixel-btn-bg: #2e2e4a; --pixel-btn-hover: #3a3a5e;
+      --pixel-shadow: 2px 2px 0px #0a0a18;
+    }
+    [data-theme="dark"] button { background: #2e2e4a; color: #ddddff; border-color: #5555aa; }
+    [data-theme="dark"] button:hover { background: #3a3a5e; border-color: #7777bb; }
+    [data-theme="dark"] .btn-crop { background: #3a2a1a; color: #ffcc77; border-color: #886633; }
+    [data-theme="dark"] .btn-crop:hover { background: #4a3a2a; }
+    [data-theme="dark"] .btn-crop.active { background: #dd6600; color: #fff; border-color: #aa4400; }
+    [data-theme="dark"] .btn-danger { background: #dd3333; border-color: #aa1111; color: #fff; }
+    [data-theme="dark"] .preview { background: #12122a; }
+    [data-theme="dark"] .zoom-controls button { background: rgba(30,30,60,0.95); color: #ddddff; border-color: #555577; }
+    [data-theme="dark"] .zoom-controls button:hover { background: #3a3a5e; }
+    [data-theme="dark"] .format-select-btn { background: #2e2e4a; color: #ddddff; border-color: #555577; }
+    [data-theme="dark"] .format-select-btn:hover { background: #3a3a5e; }
+    [data-theme="dark"] .format-dropdown-menu { background: #2e2e4a; border-color: #555577; }
+    [data-theme="dark"] .format-dropdown-item { color: #ddddff; border-bottom-color: rgba(255,255,255,0.1); }
+    [data-theme="dark"] .format-dropdown-item:hover { background: #3a3a5e; }
+    [data-theme="dark"] .format-dropdown-item.active { background: #dd6600; color: #fff; }
+    [data-theme="dark"] .control-group select { background: #2e2e4a; color: #ddddff; border-color: #555577; }
+    [data-theme="dark"] .quality-val input[type="number"] { background: #2e2e4a; color: var(--pixel-accent); border-color: #555577; }
+    [data-theme="dark"] .est-savings { color: #55cc88; }
+    [data-theme="dark"] .est-increase { color: #ff5555; }
+    [data-theme="dark"] .result.success { border-left-color: #55cc88; }
+    [data-theme="dark"] .result.error { border-left-color: #ff4444; }
+    [data-theme="dark"] button.convert-btn { background: #ee7700; color: #fff; border-color: #cc5500; }
+    [data-theme="dark"] button.convert-btn:hover { background: #dd6600; }
+    [data-theme="dark"] .carousel-thumb-nav { background: #2e2e4a; color: #ddddff; border-color: #555577; }
+    [data-theme="dark"] .carousel-thumb-nav:hover { background: #3a3a5e; border-color: #7777bb; }
+    [data-theme="dark"] .thumbnail-item { background: #25253d; border-color: #555577; }
+    [data-theme="dark"] .thumbnail-item:hover { border-color: #7777bb; }
+    [data-theme="dark"] .thumbnail-item.active { border-color: var(--pixel-accent); box-shadow: 0 0 4px var(--pixel-accent), inset 0 0 4px var(--pixel-accent); }
+    [data-theme="dark"] .thumbnail-item.selected { background-color: rgba(255, 170, 68, 0.2); border-color: var(--pixel-accent); }
+    [data-theme="dark"] .thumbnail-checkbox { background: rgba(30,30,50,0.95); color: var(--pixel-accent); border-color: var(--pixel-accent); }
+    [data-theme="dark"] .thumbnail-carousel::-webkit-scrollbar-track { background: #1a1a33; }
+    [data-theme="dark"] .thumbnail-carousel::-webkit-scrollbar-thumb { background: #555577; }
+    [data-theme="dark"] .crop-inputs input { background: var(--pixel-panel); color: var(--pixel-text); border-color: var(--pixel-border); }
+    [data-theme="dark"] .toolbar-sep { background: var(--pixel-border); }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'FS Pixel Sans', monospace; font-size: 22px; color: var(--pixel-text); background: var(--pixel-bg); padding: 20px; }
     .container { max-width: 900px; margin: 0 auto; }
@@ -485,6 +537,17 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     .thumbnail-item.active { border-color: var(--pixel-accent); box-shadow: 0 0 4px var(--pixel-accent), inset 0 0 4px var(--pixel-accent); }
     .thumbnail-item.selected { background-color: rgba(204, 102, 0, 0.2); border: 3px solid var(--pixel-accent); }
     .thumbnail-checkbox { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; background: rgba(255,255,255,0.95); border: 2px solid var(--pixel-accent); cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--pixel-accent); font-size: 18px; }
+
+    .theme-toggle {
+      position: fixed; top: 14px; right: 14px; z-index: 999;
+      width: 36px; height: 36px; padding: 0; min-width: 36px;
+      border: 2px solid var(--pixel-border); border-radius: 0;
+      background: var(--pixel-btn-bg); color: var(--pixel-text);
+      font-size: 20px; cursor: pointer;
+      box-shadow: var(--pixel-shadow);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .theme-toggle:hover { background: var(--pixel-btn-hover, #d0d0e0); border-color: var(--pixel-border-light); }
   </style>
 </head>
 <body>
@@ -585,8 +648,51 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
     </div>
   </div>
 
+  <button class="theme-toggle" id="btnThemeToggle" title="Toggle Theme">&#x263E;</button>
+
   <script>
     const vscode = acquireVsCodeApi();
+
+    // Theme toggle: light → dark → auto → light (also accepts from panel via setTheme message)
+    const btnThemeToggle = document.getElementById('btnThemeToggle');
+    const savedState = vscode.getState();
+    var currentTheme = (savedState && savedState.theme) || 'auto';
+    applyTheme(currentTheme);
+
+    btnThemeToggle.addEventListener('click', function() {
+      if (currentTheme === 'light') currentTheme = 'dark';
+      else if (currentTheme === 'dark') currentTheme = 'auto';
+      else currentTheme = 'light';
+      applyTheme(currentTheme);
+      var st = vscode.getState() || {};
+      st.theme = currentTheme;
+      vscode.setState(st);
+    });
+
+    function getVscodeTheme() {
+      return document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast') ? 'dark' : 'light';
+    }
+
+    function applyTheme(theme) {
+      var resolved = theme === 'auto' ? getVscodeTheme() : theme;
+      document.documentElement.setAttribute('data-theme', resolved);
+      if (theme === 'auto') {
+        btnThemeToggle.innerHTML = '&#x25D1;';
+        btnThemeToggle.title = 'Theme: Auto (following VS Code)';
+      } else if (theme === 'dark') {
+        btnThemeToggle.innerHTML = '&#x2600;';
+        btnThemeToggle.title = 'Theme: Dark — click for Auto';
+      } else {
+        btnThemeToggle.innerHTML = '&#x263E;';
+        btnThemeToggle.title = 'Theme: Light — click for Dark';
+      }
+    }
+
+    // Watch VS Code theme changes when in auto mode
+    new MutationObserver(function() {
+      if (currentTheme === 'auto') applyTheme('auto');
+    }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
     const previewImg = document.getElementById('previewImg');
     const infoText = document.getElementById('infoText');
     const infoDims = document.getElementById('infoDims');
@@ -990,7 +1096,7 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
         case 'convertMultipleDone':
           convertBtn.disabled = false;
           convertBtn.textContent = '\u25B6 Convert';
-          var html = '<div style="background: #f5f5f5; padding: 10px; margin-top: 8px;">';
+          var html = '<div style="background: var(--pixel-panel); padding: 10px; margin-top: 8px; border: 2px solid var(--pixel-border);">';
           html += '<div style="font-weight: bold; margin-bottom: 8px; color: var(--pixel-accent);">' + msg.formatLabel + ' - Batch Convert Results</div>';
           msg.results.forEach(function(r) {
             if (r.success) {
@@ -1003,6 +1109,13 @@ export class ImageEditorProvider implements vscode.CustomReadonlyEditorProvider 
           resultArea.innerHTML = html;
           selectedThumbnails.clear();
           renderThumbnailCarousel();
+          break;
+        case 'setTheme':
+          currentTheme = msg.theme;
+          applyTheme(currentTheme);
+          var st = vscode.getState() || {};
+          st.theme = currentTheme;
+          vscode.setState(st);
           break;
         case 'error':
           convertBtn.disabled = false;

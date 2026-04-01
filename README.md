@@ -1,6 +1,6 @@
 # lwebp - Image Converter for VS Code
 
-Convert images to **WebP**, **JPEG**, or **PNG** directly from VS Code with pixel-art styled UI, sidebar panel, and custom image editor.
+Convert images to **WebP**, **JPEG**, or **PNG** directly from VS Code with pixel-art styled UI, sidebar panel, custom image editor, and light/dark theme support.
 
 <img src="https://raw.githubusercontent.com/luongwnv/lwebp/master/media/screenshots/sidebar-panel.webp" width="350" />
 
@@ -16,6 +16,7 @@ Convert images to **WebP**, **JPEG**, or **PNG** directly from VS Code with pixe
 - **Visual crop tool** — draw a crop region or enter exact pixel coordinates
 - **EXIF viewer** — camera, lens, exposure, ISO, GPS, and more
 - **Batch conversion** with progress tracking
+- **Theme toggle** — Light, Dark, or Auto (follows VS Code theme)
 
 ### Custom Image Editor
 
@@ -29,6 +30,7 @@ Open any image with **"Reopen Editor With..." > lwebp Image Editor** to get a fu
 - **File navigation** — browse other images in the same folder
 - **EXIF data** display
 - **Convert** with format, quality, and crop options
+- **Theme toggle** — synced from sidebar panel or standalone per editor
 
 ### Context Menu
 
@@ -44,9 +46,13 @@ Right-click any image in Explorer or editor tab:
 
 | Input | Output |
 |-------|--------|
-| PNG, JPG, GIF, BMP, TIFF, AVIF, HEIC/HEIF | WebP, JPEG, PNG |
+| PNG, JPG, GIF, BMP, TIFF, AVIF, HEIC/HEIF, WebP, SVG, ICO, JPEG XL (.jxl), Camera RAW (.cr2, .nef, .arw, .raw) | WebP, JPEG, PNG |
 
-HEIC/HEIF works on all platforms — native sharp on macOS, automatic fallback to `heic-convert` on Windows/Linux.
+- **HEIC/HEIF** — native sharp on macOS, automatic fallback to `heic-convert` on Windows/Linux
+- **SVG** — rasterized via sharp (librsvg)
+- **JPEG XL** — via sharp (requires libvips with libjxl support)
+- **ICO** — decoded via `icojs` (picks largest image from icon)
+- **Camera RAW** (.cr2, .nef, .arw, .raw) — decoded via `dcraw` to TIFF, then processed by sharp
 
 ## Usage
 
